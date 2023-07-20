@@ -22,6 +22,12 @@ body {
     margin: 0 auto;
 }
 
+#mid-header {
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
 #aegis-logo {
     max-width: 200px;
 }
@@ -46,4 +52,9 @@ body {
     display: flex;
     flex-direction: column;
     flex-grow: 0;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
 }

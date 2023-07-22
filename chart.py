@@ -65,3 +65,40 @@ def create_chart_element(type, n_clicks, x_val=None, y_val=None, z_val=None, run
             className='graph-div'
         )
     return new_element
+
+def create_chart_options(type, x_val=None, y_val=None, z_val=None, image=None,
+                          numerical_variable_options=None, histogram_options=None, image_options=None):
+    """if type=='3d-plot': 
+        new_element = html.Div(
+            children=[
+                dcc.Dropdown(id='3d-x-selection', options=numerical_variable_options, value=x_val, className='dropdown'),
+                dcc.Dropdown(id='3d-y-selection', options=numerical_variable_options, value=y_val, className='dropdown'),
+                dcc.Dropdown(id='3d-z-selection', options=numerical_variable_options, value=z_val, className='dropdown')
+            ],
+            className='graph-div'
+        )"""
+    if type=='histogram': 
+        new_element = html.Div(
+            children=[
+                dcc.Dropdown(id='x-selection', options=histogram_options, value=x_val, className='dropdown'),
+                dcc.Dropdown(id='y-selection', options=numerical_variable_options, value=y_val, className='dropdown', style={'display':'none'})
+            ],
+            className='options-div'
+        )
+    if type=='image-plot': 
+        new_element = html.Div(
+            children=[
+                dcc.Dropdown(id='x-selection', options=image_options, value=image, className='dropdown'),
+                dcc.Dropdown(id='y-selection', options=numerical_variable_options, value=y_val, className='dropdown', style={'display':'none'})
+            ],
+            className='options-div'
+        )
+    if type=='scatter-plot': 
+        new_element = html.Div(
+            children=[
+                dcc.Dropdown(id='x-selection', options=numerical_variable_options, value=x_val, className='dropdown'),
+                dcc.Dropdown(id='y-selection', options=numerical_variable_options, value=y_val, className='dropdown')
+            ],
+            className='options-div'
+        )
+    return new_element

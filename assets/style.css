@@ -32,14 +32,27 @@ body {
     max-width: 200px;
 }
 
-/*#right-header {
-    color: #dfdfdf;
-    margin: 4px auto;
+#right-header {
+    color: #000000;
+    margin: 4px;
     text-align: center;
     max-width: 384px;
 	font-size: 18px;
+
 }
-*/
+
+#draggable-area {
+    width: 80%;
+}
+
+#right-panel {
+    width: 20%;
+    height: auto;
+    min-height: 500px;
+    background-color: bisque;
+    display: flex;
+    flex-direction: column;
+}
 
 .graph {
     min-height: 0px;
@@ -47,6 +60,16 @@ body {
 }
 
 .graph-div {
+    min-width: 300px;
+    min-height: 300px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 0;
+}
+
+.options-div {
     width: 100%;
     height: 100%;
     display: flex;
@@ -62,8 +85,9 @@ body {
 .close-button {
     display: block;
     width: min-content;
-    height: min-content;
-    margin: 5px;
+    height: 25px;
+    margin: 2px;
+    font-size: small;
 }
 
 .dropdown {

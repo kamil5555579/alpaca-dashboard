@@ -5,14 +5,17 @@ import plotly.graph_objects as go
 import dash_draggable
 import json
 import dash_daq as daq
+import dash_bootstrap_components as dbc
 from plot import scatter_fig, histogram_fig, surface_fig
 from database import fetch_data
-from chart import create_chart_element
+from chart import create_chart_element,create_chart_options
 
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # get all the data and types of columns
 df, numerical_columns, one_dimensional_columns, two_dimensional_columns = fetch_data()
+
+created_graphs=[]
 
 # dropdowns options
 run_options = [{'label': number, 'value': number} for number in df.index.values]
@@ -20,6 +23,40 @@ image_options = [{'label': col, 'value': col} for col in two_dimensional_columns
 histogram_options = [{'label': col, 'value': col} for col in one_dimensional_columns]
 numerical_variable_options = [{'label': col, 'value': col} for col in numerical_columns]
 chart_types = ['3d-plot', 'image-plot', 'histogram', 'scatter-plot']
+
+numerical_details=[html.Summary('numerical observables')]
+for text in numerical_columns:
+    numerical_details.append(html.Div(text))
+
+array_details=[html.Summary('1D array observables')]
+for text in one_dimensional_columns:
+    array_details.append(html.Div(text))
+
+array_details.append(dbc.Button("Create chart", id={'type': 'open-modal-btn', 'index':0}, color="primary", className="mb-3"))
+array_details.append(dbc.Modal(id={'type': 'modal', 'index':0}, children=
+        [
+            dbc.ModalHeader("To jest nagłówek modalu"),
+            dbc.ModalBody(children=[
+                html.Div([dcc.Dropdown(id='chart-type-dropdown', 
+                                        options=[{'label': chart_type, 'value': chart_type} for chart_type in chart_types],
+                                        placeholder='Select Chart Type', style={'width': '200px'})
+                                        ]),
+                html.Div(id='chart-options')
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Close", id={'type': 'close-modal-btn', 'index':0}, className="ml-auto"),
+                html.Button('Add Chart', id='add-chart-btn', n_clicks=0)
+        ]),
+        ],
+        centered=True,
+    ))
+
+array_2d_details=[html.Summary('2D array observables')]
+for text in two_dimensional_columns:
+    array_2d_details.append(html.Div(text))
+
+panel_details=[html.Summary('one run analysis'), html.Details(numerical_details),
+                html.Details(array_details), html.Details(array_2d_details)]
 
 ############################# 
 # main layout of the app
@@ -29,11 +66,8 @@ app.layout = html.Div([
     html.Div(children=[
         html.Img(src='assets/alpaca_logo.png'),
         html.Div(id='mid-header', children=[
-            html.H1(id='header-title', children=['Alpaca',html.Br(),'Dashboard']), html.Br(),
-            html.Div([dcc.Dropdown(id='chart-type-dropdown', 
-            options=[{'label': chart_type, 'value': chart_type} for chart_type in chart_types],
-            placeholder='Select Chart Type', style={'width': '200px'}),
-            html.Button('Add Chart', id='add-chart-btn', n_clicks=0)], className='row'), html.Br(),
+            html.H1(id='header-title', children=['Alpaca',html.Br(),'Dashboard'])]),
+        html.Div([
             html.Div([dcc.Dropdown(id='dashboard-name-dropdown',
             placeholder='Select user dash', style={'width': '200px'}),
             html.Button('save pos', id='save-button', n_clicks=0, type='button'),
@@ -52,7 +86,9 @@ app.layout = html.Div([
             dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)],
             id='right-header')
         ], id='header-area'),
-        dash_draggable.ResponsiveGridLayout(id='draggable', children=[]),
+       html.Div(className='row', children=[
+            html.Div(id='draggable-area', children=[dash_draggable.ResponsiveGridLayout(id='draggable', children=[], nrows=4, ncols=4, clearSavedLayout=True)]),
+            html.Div(id='right-panel', children=html.Details(panel_details))]),
         html.Div(id='dummy-out')
             ])
 
@@ -61,26 +97,33 @@ app.layout = html.Div([
 # all the callbacks
 #############################
 
-# image plot callback
+# modal open and close
 
 @app.callback(
-    Output({'type':'image-plot', 'index':MATCH}, 'figure'),
-    [Input({'type':'run-selection', 'index':MATCH}, 'value'),
-    Input({'type':'image-selection', 'index':MATCH}, 'value')])
-def update_graph(selected_run, selected_img):
+    Output({'type': 'modal', 'index':MATCH}, 'is_open'),
+    [Input({'type': 'open-modal-btn', 'index':MATCH}, "n_clicks"), Input({'type': 'close-modal-btn', 'index':MATCH}, "n_clicks")],
+    [State({'type': 'modal', 'index':MATCH}, "is_open")],
+)
+def toggle_modal(open_clicks, close_clicks, is_open):
+    if open_clicks or close_clicks:
+        return not is_open
+    return is_open
 
-    if selected_run and selected_img:
-        data = df[selected_img][selected_run]
-        if data is not None and data.any():
-            img = px.imshow(df[selected_img][selected_run], title=two_dimensional_columns[0], zmin=0, zmax=np.max(df[selected_img][selected_run]) / 3,  #
-                            color_continuous_scale='GnBu')
-            return img
-        else:
-            return px.imshow([[0]], color_continuous_scale='gray')
-    else:
-        return px.imshow([[0]], color_continuous_scale='gray')
+# chart type dropdown
+
+@app.callback(
+    Output('chart-options', 'children'),
+    Input('chart-type-dropdown', 'value')
+)
+def update_options(chart_type):
+    if chart_type is None:
+        return []
+
+    new_options = create_chart_options(type=chart_type, numerical_variable_options=numerical_variable_options,
+                                     image_options=image_options, histogram_options=histogram_options)
     
-# 3D plot callback
+    return new_options
+
 
 @app.callback(
     Output({'type':'3d-plot', 'index':MATCH}, 'figure'),
@@ -161,15 +204,39 @@ def update_metrics(n_intervals):
     Output('chart-type-dropdown', 'value'),
     State('chart-type-dropdown', 'value'),
     Input('add-chart-btn', 'n_clicks'),
-    State('draggable', 'children')
+    State('draggable', 'children'),
+    State('x-selection', 'value'),
+    State('y-selection', 'value'),
+    prevent_initial_call=True
 )
-def add_chart(chart_type, n_clicks, existing_children):
-    if chart_type is None:
-        return existing_children, None
+def add_chart(chart_type, n_clicks, existing_children, selected_x, selected_y):
 
-    new_chart = create_chart_element(type=chart_type, n_clicks=n_clicks, numerical_variable_options=numerical_variable_options,
-                                     image_options=image_options, run_options=run_options, histogram_options=histogram_options)
-    existing_children.append(new_chart)
+    if n_clicks:
+        if chart_type is None:
+            return existing_children, None
+
+        if chart_type=='image-plot':
+            if selected_x:
+                data = df[selected_x].iloc[1]
+                if data is not None and data.any():
+                    img = px.imshow(df[selected_x].iloc[1], title=two_dimensional_columns[0], zmin=0, zmax=np.max(df[selected_x].iloc[1]) / 3,  #
+                                    color_continuous_scale='GnBu')
+            else:
+                img = px.imshow([[0]], color_continuous_scale='gray')
+
+        #new_chart = create_chart_element(type=chart_type, n_clicks=n_clicks, numerical_variable_options=numerical_variable_options,
+        #                                image_options=image_options, run_options=run_options, histogram_options=histogram_options)
+        new_element = html.Div(
+            children=[html.Button('x', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button'),
+                                 dcc.Graph(id={'type':'image-plot',
+                                 'index':n_clicks}, className='graph', figure=img)],
+            className='graph-div'
+        )
+        chart_dic={'type':'image-plot', 'index':n_clicks, 'x_val': selected_x}
+        created_graphs.append(chart_dic)
+        
+        existing_children.append(new_element)
     
     return existing_children, None
     
@@ -178,33 +245,15 @@ def add_chart(chart_type, n_clicks, existing_children):
 @app.callback(
     Output('dummy-out', 'children'),
     Input('save-button', 'n_clicks'),
-    [State({'type':'3d-x-selection', 'index':ALL}, 'value'),
-    State({'type':'3d-y-selection', 'index':ALL}, 'value'),
-    State({'type':'3d-z-selection', 'index':ALL}, 'value'),
-    State({'type':'3d-plot', 'index':ALL}, 'id'),
-    State({'type':'scatter-x-selection', 'index':ALL}, 'value'),
-    State({'type':'scatter-y-selection', 'index':ALL}, 'value'),
-    State({'type':'scatter-plot', 'index':ALL}, 'id'),
-    State({'type':'histogram-x-selection', 'index':ALL}, 'value'),
-    State({'type':'histogram-run-selection', 'index':ALL}, 'value'),
-    State({'type':'histogram', 'index':ALL}, 'id'),
-    State({'type':'run-selection', 'index':ALL}, 'value'),
-    State({'type':'image-selection', 'index':ALL}, 'value'),
-    State({'type':'image-plot', 'index':ALL}, 'id'),
-    State('draggable', 'layouts'),
+    [State('draggable', 'layouts'),
     State('dashboard-name-dropdown', 'value')],
     prevent_initial_call=True
 )
-def save_position(n_clicks,
-                   x_3d, y_3d, z_3d, p_3d,
-                  x_sc, y_sc, p_sc,
-                  x_his, run_his, p_his,
-                  run_img, img_img, p_img,
-                   layout, dash_name):
+def save_position(n_clicks, layout, dash_name):
     
     if dash_name:
 
-        all_elements=[]
+        all_elements=created_graphs
         all_data=[]
 
         try:
@@ -214,44 +263,11 @@ def save_position(n_clicks,
             # If the file doesn't exist, continue with an empty list
             pass
 
-        for number, id in enumerate(p_3d):
-            type=id['type']
-            index=id['index']
-            x_val=x_3d[number]
-            y_val=y_3d[number]
-            z_val=z_3d[number]
-            dic={'type':type, 'index':index, 'x_val':x_val, 'y_val':y_val, 'z_val':z_val}
-            all_elements.append(dic)
-
-        for number, id in enumerate(p_sc):
-            type=id['type']
-            index=id['index']
-            x_val=x_sc[number]
-            y_val=y_sc[number]
-            dic={'type':type, 'index':index, 'x_val':x_val, 'y_val':y_val}
-            all_elements.append(dic)
-
-        for number, id in enumerate(p_his):
-            type=id['type']
-            index=id['index']
-            x_val=x_his[number]
-            run=run_his[number]
-            dic={'type':type, 'index':index, 'x_val':x_val, 'run':run}
-            all_elements.append(dic)
-
-        for number, id in enumerate(p_img):
-            type=id['type']
-            index=id['index']
-            run=run_img[number]
-            img=img_img[number]
-            dic={'type':type, 'index':index, 'run':run, 'img':img}
-            all_elements.append(dic)
-
         if all_elements==[]:
             return None
         
         pos = layout
-        all_elements = sorted(all_elements, key=lambda x: x['index'])
+
         found_dash=False
         for dash in all_data:
             if dash['name'] == dash_name:
@@ -299,9 +315,16 @@ def load_position(n_clicks, dash_name):
                 x_val=element['x_val']
                 new_chart=create_chart_element(type=type, n_clicks=index, run=run, x_val=x_val, histogram_options=histogram_options, run_options=run_options)
             elif type=='image-plot':
-                run=element['run']
-                img=element['img']
-                new_chart=create_chart_element(type=type, n_clicks=index, run=run, image=img, run_options=run_options, image_options=image_options)
+                x_val=element['x_val']
+                img = px.imshow(df[x_val].iloc[1], title=two_dimensional_columns[0], zmin=0, zmax=np.max(df[x_val].iloc[1]) / 3,  #
+                                    color_continuous_scale='GnBu')
+                new_chart = html.Div(
+            children=[html.Button('x', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button'),
+                                 dcc.Graph(id={'type':'image-plot',
+                                 'index':n_clicks}, className='graph', figure=img)],
+            className='graph-div'
+        )
             else:
                 x_val=element['x_val']
                 y_val=element['y_val']

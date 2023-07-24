@@ -4,14 +4,18 @@ from scipy.interpolate import griddata
 
 # plotting functions taken from alpaca
 
-def scatter_fig(df, x_col, y_col):
+def scatter_fig(df, x_col, y_col, run, title):
         
-    # erase NaN values
-    df = df[df[y_col].notnull()]
+    if run not in df[x_col].dropna().index:
+        return go.Figure()
+    
+    if run not in df[x_col].dropna().index:
+        return go.Figure()
 
     # make arrays
-    x = np.array(df[x_col])
-    y = np.array(df[y_col])
+
+    x = df[x_col][run]
+    y = df[y_col][run]
 
     fig = dict({
             "data": [{"type": 'scatter',
@@ -24,7 +28,7 @@ def scatter_fig(df, x_col, y_col):
                       "name": y_col,
                       "showlegend": False}  # default: False
                      ],
-            "layout": {"barmode": "stack", "title": {"text": y_col, "font": {"size": 20}},
+            "layout": {"barmode": "stack", "title": {"text": title, "font": {"size": 20}},
                        "legend": {"bgcolor": '#FFFFFF', "bordercolor": '#ff0000', "font": {"size": 25},
                                   "orientation": 'v'},
                        "xaxis": {"title": {"text": x_col, "font": {"size": 15}},
@@ -33,7 +37,7 @@ def scatter_fig(df, x_col, y_col):
                                  "linecolor": "black", "linewidth": 4, "ticks": "inside", "tickwidth": 5,
                                  "nticks": 20,
                                  "ticklabelstep": 2, "ticklen": 10, "position": 0, "mirror": "all"},
-                       "yaxis": {
+                       "yaxis": {"title": {"text": y_col, "font": {"size": 15}},
                                  "tickfont": {"size": 15},
                                  "autorange": True, "fixedrange": False, "exponentformat": "power",
                                  "gridcolor": "black", "linecolor": "black", "linewidth": 4, "ticks": "inside",
@@ -95,12 +99,14 @@ def surface_fig(df, x_col, y_col, z_col):
         })
     return fig
 
-def histogram_fig(df, x_col, run):
+def histogram_fig(df, x_col, run, title):
 
     if run not in df[x_col].dropna().index:
         return go.Figure()
+    
     # make arrays
-    x = df[x_col].dropna()[run]
+
+    x = df[x_col][run]
     y=None
 
     fig = dict({
@@ -117,7 +123,7 @@ def histogram_fig(df, x_col, run):
                        "yaxis": {"title": "events / count"},
                        # "yaxis_range": [0, 300],
                        # "xaxis_range": [17, 33],
-
+                       "title": {"text": title, "font": {"size": 20}},
                        "legend": {"bgcolor": '#FFFFFF', "bordercolor": '#ff0000', "font": {"size": 25},
                                   "orientation": 'v'},
                        "showlegend": False}

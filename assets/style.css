@@ -7,19 +7,21 @@ body {
 /* Header styling */
 #header-area {
     background-color: rgb(254, 254, 254);
-    height: 246px;
+    height: 200px;
 	margin:0;
-	padding:24px;
+	padding:20px;
     display: flex;
     flex-direction: row;
 }
 
 #header-title {
     color: #060101;
-    font-size: 48px;
+    font-size: 44px;
     font-weight: bold;
     text-align: center;
     margin: 0 auto;
+    margin-bottom: 25px;
+    margin-top: 5px;
 }
 
 #mid-header {
@@ -29,7 +31,7 @@ body {
 }
 
 #aegis-logo {
-    max-width: 200px;
+    max-width: 220px;
 }
 
 #right-header {
@@ -37,8 +39,7 @@ body {
     margin: 4px;
     text-align: center;
     max-width: 384px;
-	font-size: 18px;
-
+	font-size: 21px;
 }
 
 #draggable-area {
@@ -82,16 +83,28 @@ body {
     flex-direction: row;
 }
 
+.column {
+    display: flex;
+    flex-direction: column;
+}
+
 .close-button {
     display: block;
     width: min-content;
-    height: 25px;
     margin: 2px;
     font-size: small;
 }
 
 .dropdown {
-    margin: 2px;
-    font-size: small;
-    height: min-content;
+    margin-bottom: 10px;
+    font-size: medium;
+    width: auto;
+}
+
+.button {
+    display: block;
+    width: auto;
+    height: 35px;
+    margin: 0px 0px 5px 10px;
+
 }

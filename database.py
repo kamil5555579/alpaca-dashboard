@@ -10,11 +10,11 @@ def fetch_data():
     engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost/alpaca")
     with engine.begin() as conn:
         query = sqlalchemy.text("""SELECT * FROM alpaca
-                                ORDER BY "Run_Number_Run_Number___value" DESC
+                                ORDER BY "Run_Number Run_Number __value" DESC
                                 """)
         df = pd.read_sql_query(query, conn)
 
-    df.set_index('Run_Number_Run_Number___value', inplace=True)
+    df.set_index('Run_Number Run_Number __value', inplace=True)
 
     # need to convert arrays saved as bytes back to arrays
     byte_columns = [column for column in df.columns if column.endswith("_shape") is False and df[column].dtype == object]

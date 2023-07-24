@@ -8,7 +8,7 @@ import dash_daq as daq
 import dash_bootstrap_components as dbc
 from plot import scatter_fig, histogram_fig, surface_fig
 from database import fetch_data
-from chart import create_chart_element,create_chart_options
+from chart import create_chart_options, create_chart
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -23,6 +23,39 @@ image_options = [{'label': col, 'value': col} for col in two_dimensional_columns
 histogram_options = [{'label': col, 'value': col} for col in one_dimensional_columns]
 numerical_variable_options = [{'label': col, 'value': col} for col in numerical_columns]
 chart_types = ['3d-plot', 'image-plot', 'histogram', 'scatter-plot']
+all_columns=np.concatenate((numerical_columns,one_dimensional_columns, two_dimensional_columns))
+
+def create_tree(items, parent_full_name=None):
+    trees = {}
+    words = []
+
+    for item in items:
+        parts = item.split(' ')
+        first_word = parts[0]
+        full_name = item if parent_full_name is None else f"{parent_full_name} {item}"
+
+        if len(parts) < 2:
+            words.append(full_name)
+        else:
+            rest_of_words = ' '.join(parts[1:])
+            if first_word not in trees:
+                trees[first_word] = [rest_of_words]
+            else:
+                trees[first_word].append(rest_of_words)
+
+    if not trees:
+        return html.Div(dcc.Checklist(options=[{'label': word.split(' ')[-1], 'value': word} for word in words]))
+
+
+    tree_elements = []
+    for first_word, children in trees.items():
+        tree = html.Details([
+            html.Summary(first_word)
+        ])
+        tree.children.append(create_tree(children, parent_full_name=first_word))
+        tree_elements.append(tree)
+
+    return html.Div(tree_elements)
 
 numerical_details=[html.Summary('numerical observables')]
 for text in numerical_columns:
@@ -31,25 +64,6 @@ for text in numerical_columns:
 array_details=[html.Summary('1D array observables')]
 for text in one_dimensional_columns:
     array_details.append(html.Div(text))
-
-array_details.append(dbc.Button("Create chart", id={'type': 'open-modal-btn', 'index':0}, color="primary", className="mb-3"))
-array_details.append(dbc.Modal(id={'type': 'modal', 'index':0}, children=
-        [
-            dbc.ModalHeader("To jest nagłówek modalu"),
-            dbc.ModalBody(children=[
-                html.Div([dcc.Dropdown(id='chart-type-dropdown', 
-                                        options=[{'label': chart_type, 'value': chart_type} for chart_type in chart_types],
-                                        placeholder='Select Chart Type', style={'width': '200px'})
-                                        ]),
-                html.Div(id='chart-options')
-            ]),
-            dbc.ModalFooter([
-                dbc.Button("Close", id={'type': 'close-modal-btn', 'index':0}, className="ml-auto"),
-                html.Button('Add Chart', id='add-chart-btn', n_clicks=0)
-        ]),
-        ],
-        centered=True,
-    ))
 
 array_2d_details=[html.Summary('2D array observables')]
 for text in two_dimensional_columns:
@@ -66,30 +80,60 @@ app.layout = html.Div([
     html.Div(children=[
         html.Img(src='assets/alpaca_logo.png'),
         html.Div(id='mid-header', children=[
-            html.H1(id='header-title', children=['Alpaca',html.Br(),'Dashboard'])]),
-        html.Div([
-            html.Div([dcc.Dropdown(id='dashboard-name-dropdown',
-            placeholder='Select user dash', style={'width': '200px'}),
-            html.Button('save pos', id='save-button', n_clicks=0, type='button'),
-            html.Button('load', id='load-button', n_clicks=0)], className='row'), html.Br(),
-                                            html.Div([dcc.Input(id='new-dashboard', 
-                                            type='text',
-                                            placeholder='create new dash', style={'width': '200px'}),
-                                            html.Button('save', id='new-dash-button', n_clicks=0, type='button')], className='row')
+            html.H1(id='header-title', children=['Alpaca Dashboard(s)']),
+            html.Div(className='row', children=[
+                    dcc.Dropdown(id='dashboard-name-dropdown',
+                        placeholder='Select your dashboard', className='dropdown'),
+                    dbc.Button('Load', id='load-button', n_clicks=0, color="primary", className="button"),
+                    dbc.Button('Save', id='save-button', n_clicks=0, color="primary", class_name='button'),
+                    dbc.Button("Create new dash", id={'type': 'open-modal-btn', 'index':1}, color="primary", className="button"),
+                    dbc.Button("Create new object", id={'type': 'open-modal-btn', 'index':0}, color="primary", className="button"),
+                    ])
         ]),
-        html.H2(children=[
+        html.Div(children=[
             html.Img(src='assets/AEgIS-logo.png', id='aegis-logo'), html.Br(),
-            'Last run:', df.index[0],html.Br(),
-            'check for new runs',html.Br(),
-            daq.ToggleSwitch(id='my-toggle-switch', value=False), html.Br(),
+            'Last run: ', df.index[0],html.Br(),
+            daq.ToggleSwitch(id='my-toggle-switch', value=False),
             html.Div(id='my-toggle-switch-output'),
             dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)],
             id='right-header')
         ], id='header-area'),
        html.Div(className='row', children=[
             html.Div(id='draggable-area', children=[dash_draggable.ResponsiveGridLayout(id='draggable', children=[], nrows=4, ncols=4, clearSavedLayout=True)]),
-            html.Div(id='right-panel', children=html.Details(panel_details))]),
-        html.Div(id='dummy-out')
+            html.Div(id='right-panel', children=create_tree(all_columns))]),
+        html.Div(id='dummy-out'),
+        dbc.Modal(id={'type': 'modal', 'index':0}, children=
+        [
+            dbc.ModalHeader("To jest nagłówek modalu"),
+            dbc.ModalBody(children=[
+                html.Div([dcc.Dropdown(id='chart-type-dropdown', 
+                                        options=[{'label': chart_type, 'value': chart_type} for chart_type in chart_types],
+                                        placeholder='Select Chart Type', className='dropdown')
+                                        ]),
+                html.Div(id='chart-options')
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Close", id={'type': 'close-modal-btn', 'index':0}, className="button"),
+                dbc.Button('Add Chart', id='add-chart-btn', n_clicks=0, color="primary", className="button")
+        ]),
+        ],
+        centered=True,
+        ),
+        dbc.Modal(id={'type': 'modal', 'index':1}, children=
+        [
+            dbc.ModalHeader("To jest nagłówek modalu"),
+            dbc.ModalBody(children=[
+                dcc.Input(id='new-dashboard', 
+                                    type='text',
+                                    placeholder='create new dash', style={'width': '200px'})
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Close", id={'type': 'close-modal-btn', 'index':1}, className="button"),
+                 dbc.Button('save', id='new-dash-button', n_clicks=0, color="primary", className="button"),
+        ]),
+        ],
+        centered=True,
+    )
             ])
 
 
@@ -215,27 +259,8 @@ def add_chart(chart_type, n_clicks, existing_children, selected_x, selected_y):
         if chart_type is None:
             return existing_children, None
 
-        if chart_type=='image-plot':
-            if selected_x:
-                data = df[selected_x].iloc[1]
-                if data is not None and data.any():
-                    img = px.imshow(df[selected_x].iloc[1], title=two_dimensional_columns[0], zmin=0, zmax=np.max(df[selected_x].iloc[1]) / 3,  #
-                                    color_continuous_scale='GnBu')
-            else:
-                img = px.imshow([[0]], color_continuous_scale='gray')
-
-        #new_chart = create_chart_element(type=chart_type, n_clicks=n_clicks, numerical_variable_options=numerical_variable_options,
-        #                                image_options=image_options, run_options=run_options, histogram_options=histogram_options)
-        new_element = html.Div(
-            children=[html.Button('x', id={'type':'close-button',
-                                 'index':n_clicks}, n_clicks=0, className='close-button'),
-                                 dcc.Graph(id={'type':'image-plot',
-                                 'index':n_clicks}, className='graph', figure=img)],
-            className='graph-div'
-        )
-        chart_dic={'type':'image-plot', 'index':n_clicks, 'x_val': selected_x}
+        new_element, chart_dic = create_chart(chart_type, 'joł', df, n_clicks, selected_x, selected_y, 387122)
         created_graphs.append(chart_dic)
-        
         existing_children.append(new_element)
     
     return existing_children, None

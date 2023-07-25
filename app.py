@@ -1,116 +1,45 @@
-from dash import Dash, html, dash_table, dcc, callback, Output, Input, State, MATCH, ALL, Patch, ctx, callback_context
+from dash import Dash, html, dcc, callback, Output, Input, State, MATCH, ALL, Patch, ctx, callback_context
 import plotly.express as px
 import numpy as np
-import plotly.graph_objects as go
 import dash_draggable
 import json
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-from plot import scatter_fig, histogram_fig, surface_fig
 from database import fetch_data
 from chart import create_chart_options, create_chart
+from tree import create_tree
+
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # get all the data and types of columns
 df, numerical_columns, one_dimensional_columns, two_dimensional_columns = fetch_data()
 
-created_graphs=[]
-
 # dropdowns options
 run_options = [{'label': number, 'value': number} for number in df.index.values]
 image_options = [{'label': col, 'value': col} for col in two_dimensional_columns]
-histogram_options = [{'label': col, 'value': col} for col in one_dimensional_columns]
-numerical_variable_options = [{'label': col, 'value': col} for col in numerical_columns]
-chart_types = ['3d-plot', 'image-plot', 'histogram', 'scatter-plot']
+one_dimensional_options = [{'label': col, 'value': col} for col in one_dimensional_columns]
+numerical_options = [{'label': col, 'value': col} for col in numerical_columns]
+chart_types = ['image-plot', 'histogram', 'scatter-plot']
 all_columns=np.concatenate((numerical_columns,one_dimensional_columns, two_dimensional_columns))
 
-def create_tree(items, parent_full_name=None):
-    trees = {}
-    words = []
+# modals (for creating user and creating chart)
 
-    for item in items:
-        parts = item.split(' ')
-        first_word = parts[0]
-        full_name = item if parent_full_name is None else f"{parent_full_name} {item}"
-
-        if len(parts) < 2:
-            words.append(full_name)
-        else:
-            rest_of_words = ' '.join(parts[1:])
-            if first_word not in trees:
-                trees[first_word] = [rest_of_words]
-            else:
-                trees[first_word].append(rest_of_words)
-
-    if not trees:
-        return html.Div(dcc.Checklist(options=[{'label': word.split(' ')[-1], 'value': word} for word in words]))
-
-
-    tree_elements = []
-    for first_word, children in trees.items():
-        tree = html.Details([
-            html.Summary(first_word)
-        ])
-        tree.children.append(create_tree(children, parent_full_name=first_word))
-        tree_elements.append(tree)
-
-    return html.Div(tree_elements)
-
-numerical_details=[html.Summary('numerical observables')]
-for text in numerical_columns:
-    numerical_details.append(html.Div(text))
-
-array_details=[html.Summary('1D array observables')]
-for text in one_dimensional_columns:
-    array_details.append(html.Div(text))
-
-array_2d_details=[html.Summary('2D array observables')]
-for text in two_dimensional_columns:
-    array_2d_details.append(html.Div(text))
-
-panel_details=[html.Summary('one run analysis'), html.Details(numerical_details),
-                html.Details(array_details), html.Details(array_2d_details)]
-
-############################# 
-# main layout of the app
-#############################
-
-app.layout = html.Div([
-    html.Div(children=[
-        html.Img(src='assets/alpaca_logo.png'),
-        html.Div(id='mid-header', children=[
-            html.H1(id='header-title', children=['Alpaca Dashboard(s)']),
-            html.Div(className='row', children=[
-                    dcc.Dropdown(id='dashboard-name-dropdown',
-                        placeholder='Select your dashboard', className='dropdown'),
-                    dbc.Button('Load', id='load-button', n_clicks=0, color="primary", className="button"),
-                    dbc.Button('Save', id='save-button', n_clicks=0, color="primary", class_name='button'),
-                    dbc.Button("Create new dash", id={'type': 'open-modal-btn', 'index':1}, color="primary", className="button"),
-                    dbc.Button("Create new object", id={'type': 'open-modal-btn', 'index':0}, color="primary", className="button"),
-                    ])
-        ]),
-        html.Div(children=[
-            html.Img(src='assets/AEgIS-logo.png', id='aegis-logo'), html.Br(),
-            'Last run: ', df.index[0],html.Br(),
-            daq.ToggleSwitch(id='my-toggle-switch', value=False),
-            html.Div(id='my-toggle-switch-output'),
-            dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)],
-            id='right-header')
-        ], id='header-area'),
-       html.Div(className='row', children=[
-            html.Div(id='draggable-area', children=[dash_draggable.ResponsiveGridLayout(id='draggable', children=[], nrows=4, ncols=4, clearSavedLayout=True)]),
-            html.Div(id='right-panel', children=create_tree(all_columns))]),
-        html.Div(id='dummy-out'),
-        dbc.Modal(id={'type': 'modal', 'index':0}, children=
+modals = html.Div([dbc.Modal(id={'type': 'modal', 'index':0}, children=
         [
-            dbc.ModalHeader("To jest nagłówek modalu"),
+            dbc.ModalHeader(id='errors', children=["To jest nagłówek modalu"]),
             dbc.ModalBody(children=[
                 html.Div([dcc.Dropdown(id='chart-type-dropdown', 
                                         options=[{'label': chart_type, 'value': chart_type} for chart_type in chart_types],
                                         placeholder='Select Chart Type', className='dropdown')
                                         ]),
-                html.Div(id='chart-options')
+                html.Div(id='chart-options', children=[html.Div(
+            children=[
+                dcc.Dropdown(id='x-selection', options=one_dimensional_options, className='dropdown', style={'display':'none'}),
+                dcc.Dropdown(id='y-selection', options=numerical_options, className='dropdown', style={'display':'none'})
+            ],
+            className='options-div'
+        )])
             ]),
             dbc.ModalFooter([
                 dbc.Button("Close", id={'type': 'close-modal-btn', 'index':0}, className="button"),
@@ -133,7 +62,50 @@ app.layout = html.Div([
         ]),
         ],
         centered=True,
-    )
+    )])
+
+# mid header
+
+mid_header = html.Div(id='mid-header', children=[
+            html.H1(id='header-title', children=['Alpaca Dashboard(s)']),
+            html.Div(className='row', children=[
+                    dcc.Dropdown(id='dashboard-name-dropdown',
+                        placeholder='Select your dashboard', className='dropdown'),
+                    dbc.Button('Load', id='load-button', n_clicks=0, color="primary", className="button"),
+                    dbc.Button('Save', id='save-button', n_clicks=0, color="primary", class_name='button'),
+                    dbc.Button("Create new dash", id={'type': 'open-modal-btn', 'index':1}, color="primary", className="button"),
+                    dbc.Button("Create new object", id={'type': 'open-modal-btn', 'index':0}, color="primary", className="button"),
+                    ])
+        ])
+
+
+# right header
+
+right_header = html.Div(children=[
+            html.Img(src='assets/AEgIS-logo.png', id='aegis-logo'),
+            html.Div(className='row', children=['Run: ',
+            dcc.Dropdown(id='run-selection', options=df.index,
+                        value=df.index[0], clearable=False,
+                        style={'width':'170px', 'margin-bottom': '5px', 'font-size': 'large'})]),
+            daq.ToggleSwitch(id='my-toggle-switch', value=False),
+            html.Div(id='my-toggle-switch-output'),
+            dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)],
+            id='right-header')
+
+############################# 
+# main layout of the app
+#############################
+
+app.layout = html.Div([
+    html.Div(children=[
+        html.Img(src='assets/alpaca_logo.png'),
+        mid_header,
+        right_header,
+        ], id='header-area'),
+       html.Div(className='row', children=[
+            html.Div(id='draggable-area', children=[dash_draggable.ResponsiveGridLayout(id='draggable', children=[])]),
+            html.Div(id='right-panel', children=create_tree(all_columns))
+            ]), dcc.Store(id='created-graphs', data=[]), modals
             ])
 
 
@@ -141,19 +113,7 @@ app.layout = html.Div([
 # all the callbacks
 #############################
 
-# modal open and close
-
-@app.callback(
-    Output({'type': 'modal', 'index':MATCH}, 'is_open'),
-    [Input({'type': 'open-modal-btn', 'index':MATCH}, "n_clicks"), Input({'type': 'close-modal-btn', 'index':MATCH}, "n_clicks")],
-    [State({'type': 'modal', 'index':MATCH}, "is_open")],
-)
-def toggle_modal(open_clicks, close_clicks, is_open):
-    if open_clicks or close_clicks:
-        return not is_open
-    return is_open
-
-# chart type dropdown
+# updating chart options after choosing chart type
 
 @app.callback(
     Output('chart-options', 'children'),
@@ -161,120 +121,57 @@ def toggle_modal(open_clicks, close_clicks, is_open):
 )
 def update_options(chart_type):
     if chart_type is None:
-        return []
+        return html.Div(
+            children=[
+                dcc.Dropdown(id='x-selection', options=one_dimensional_options, className='dropdown', style={'display':'none'}),
+                dcc.Dropdown(id='y-selection', options=numerical_options, className='dropdown', style={'display':'none'})
+            ],
+            className='options-div'
+        ) # dummy options because there are errors if x and y selection dont exist
 
-    new_options = create_chart_options(type=chart_type, numerical_variable_options=numerical_variable_options,
-                                     image_options=image_options, histogram_options=histogram_options)
+    new_options = create_chart_options(type=chart_type, numerical_options=numerical_options,
+                                     image_options=image_options, one_dimensional_options=one_dimensional_options)
     
     return new_options
 
-
-@app.callback(
-    Output({'type':'3d-plot', 'index':MATCH}, 'figure'),
-    [Input({'type':'3d-x-selection', 'index':MATCH}, 'value'),
-    Input({'type':'3d-y-selection', 'index':MATCH}, 'value'),
-    Input({'type':'3d-z-selection', 'index':MATCH}, 'value')])
-
-def update_graph(x,y,z):
-
-    if x and y and z and (x != y):
-        fig = surface_fig(df,x,y,z)
-        return fig
-    else:
-        return go.Figure()
-
-# scatter plot callback
-
-@app.callback(
-    Output({'type':'scatter-plot', 'index':MATCH}, 'figure'),
-    [Input({'type':'scatter-x-selection', 'index':MATCH}, 'value'),
-    Input({'type':'scatter-y-selection', 'index':MATCH}, 'value')],)
-def update_graph(x,y):
-
-    if x and y:
-        fig = scatter_fig(df,x,y)
-        return fig
-    else:
-        return go.Figure()
-
-# histogram callback
-
-@app.callback(
-    Output({'type':'histogram', 'index':MATCH}, 'figure'),
-    [Input({'type':'histogram-x-selection', 'index':MATCH}, 'value'),
-    Input({'type':'histogram-run-selection', 'index':MATCH}, 'value')])
-def update_graph(x,run):
-
-    if x and run:
-        fig = histogram_fig(df,x,run)
-        return fig
-    else:
-        return go.Figure()
-
-# toggle on/off
-
-@app.callback(
-    Output('interval-component', 'disabled'),
-    Output('my-toggle-switch-output', 'children'),
-    Input('my-toggle-switch', 'value'),
-)
-def toggle_interval(on):
-    if on:
-        return False, "Auto refresh is ON."
-    else:
-        return True, "Auto refresh is OFF."
-    
-# refresh button callback
-
-@app.callback(
-    [Output({'type':'run-selection', 'index':MATCH}, 'options'),
-    Output({'type':'run-selection', 'index':MATCH}, 'value')],
-    Input('interval-component', 'n_intervals'),
-    prevent_initial_call=True
-)
-def update_metrics(n_intervals):
-
-        df, numerical_columns, one_dimensional_columns, two_dimensional_columns = fetch_data()
-        run_options = [{'label': number, 'value': number} for number in df.index.values]
-        selected_run = run_options[0]['value']
-
-        return run_options, selected_run
-
-
-# new chart callback
+# creating new chart
 
 @app.callback(
     Output('draggable', 'children'),
     Output('chart-type-dropdown', 'value'),
+    Output('created-graphs', 'data'),
     State('chart-type-dropdown', 'value'),
     Input('add-chart-btn', 'n_clicks'),
     State('draggable', 'children'),
+    State('created-graphs', 'data'),
     State('x-selection', 'value'),
     State('y-selection', 'value'),
+    State('run-selection', 'value'),
     prevent_initial_call=True
 )
-def add_chart(chart_type, n_clicks, existing_children, selected_x, selected_y):
+def add_chart(chart_type, n_clicks, existing_children, existing_data, selected_x, selected_y, selected_run):
 
     if n_clicks:
         if chart_type is None:
-            return existing_children, None
+            return existing_children, None, existing_data
 
-        new_element, chart_dic = create_chart(chart_type, 'joł', df, n_clicks, selected_x, selected_y, 387122)
-        created_graphs.append(chart_dic)
+        new_element, chart_dic = create_chart(chart_type, 'joł', df, n_clicks, selected_x, selected_y, selected_run)
+        existing_data.append(chart_dic)
         existing_children.append(new_element)
     
-    return existing_children, None
+    return existing_children, None, existing_data
     
-# save pos callback
+# saving all graphs and their positions to json
 
 @app.callback(
-    Output('dummy-out', 'children'),
+    Output('load-button', 'n_clicks'),
     Input('save-button', 'n_clicks'),
     [State('draggable', 'layouts'),
-    State('dashboard-name-dropdown', 'value')],
+    State('dashboard-name-dropdown', 'value'),
+    State('created-graphs', 'data'),],
     prevent_initial_call=True
 )
-def save_position(n_clicks, layout, dash_name):
+def save_position(n_clicks, layout, dash_name, created_graphs):
     
     if dash_name:
 
@@ -289,7 +186,7 @@ def save_position(n_clicks, layout, dash_name):
             pass
 
         if all_elements==[]:
-            return None
+            return 1
         
         pos = layout
 
@@ -307,19 +204,21 @@ def save_position(n_clicks, layout, dash_name):
         with open('assets/data.json', 'w') as file:
             json.dump(all_data, file)
 
-    return None
+    return 1
     
-# load pos callback
+# loading graphs and positions from json
 
 @app.callback(
     [Output('draggable', 'children', allow_duplicate=True),
     Output('draggable', 'layouts'),
-    Output('add-chart-btn', 'n_clicks')],
+    Output('add-chart-btn', 'n_clicks'),
+    Output('created-graphs', 'data', allow_duplicate=True),],
     Input('load-button', 'n_clicks'),
     State('dashboard-name-dropdown', 'value'),
+    State('run-selection', 'value'),
     prevent_initial_call=True
 )
-def load_position(n_clicks, dash_name):
+def load_position(n_clicks, dash_name, selected_run):
 
     if dash_name:
         with open('assets/data.json', 'r') as file:
@@ -328,49 +227,34 @@ def load_position(n_clicks, dash_name):
         loaded_data = next((item for item in loaded_data if item["name"] == dash_name), None)
 
         if loaded_data is None:
-            return [], {}, 0
+            return [], {}, 0, []
         
         children=[]
+        created_graphs=[]
         n_charts=0
         for element in loaded_data['elements']:
             type=element['type']
             index=element['index']
-            if type=='histogram':
-                run=element['run']
-                x_val=element['x_val']
-                new_chart=create_chart_element(type=type, n_clicks=index, run=run, x_val=x_val, histogram_options=histogram_options, run_options=run_options)
-            elif type=='image-plot':
-                x_val=element['x_val']
-                img = px.imshow(df[x_val].iloc[1], title=two_dimensional_columns[0], zmin=0, zmax=np.max(df[x_val].iloc[1]) / 3,  #
-                                    color_continuous_scale='GnBu')
-                new_chart = html.Div(
-            children=[html.Button('x', id={'type':'close-button',
-                                 'index':n_clicks}, n_clicks=0, className='close-button'),
-                                 dcc.Graph(id={'type':'image-plot',
-                                 'index':n_clicks}, className='graph', figure=img)],
-            className='graph-div'
-        )
-            else:
-                x_val=element['x_val']
+            x_val=element['x_val']
+            y_val=None
+            if 'y_val' in element.keys():
                 y_val=element['y_val']
-                if type=='3d-plot':
-                    z_val=element['z_val']
-                else:
-                    z_val=None
-                new_chart=create_chart_element(type=type, n_clicks=index, x_val=x_val, y_val=y_val, z_val=z_val, numerical_variable_options=numerical_variable_options)
+
+            new_chart, chart_dic = create_chart(type, 'jol', df, index, x_val, y_val, selected_run)
 
             children.append(new_chart)
+            created_graphs.append(chart_dic)
             if index>=n_charts:
                 n_charts=index
 
         layout=loaded_data['pos']
 
-        return children, layout, n_charts
+        return children, layout, n_charts, created_graphs
     
     else:
-        return [], {}, 0
+        return [], {}, 0, []
 
-# create user callback
+# creating new dashboard
 
 @callback(
     [Output("dashboard-name-dropdown", "options"),
@@ -393,18 +277,20 @@ def create_new_dash(n_clicks, dash_name):
     return options, dash_name, None
 
 
-# destroy graph callback
+# deleting graphs
 
 @callback(
     Output('draggable', 'layouts', allow_duplicate=True),
     Output('draggable', 'children', allow_duplicate=True),
+    Output('created-graphs', 'data', allow_duplicate=True),
     Input({'type':'close-button', 'index':ALL}, 'n_clicks'),
     State('draggable', 'children'),
     State('draggable', 'layouts'),
+    State('created-graphs', 'data'),
     prevent_initial_call=True
 )
 
-def destroy_graph(n_clicks, children, layout):
+def destroy_graph(n_clicks, children, layout, created_graphs):
 
     position = next((index for index, num in enumerate(n_clicks) if num != 0), None)
     if position is not None:
@@ -423,10 +309,105 @@ def destroy_graph(n_clicks, children, layout):
                     for chart in children
                     if "'index': " + str(delete_chart) not in str(chart)
                 ]
+            created_graphs = [graph for graph in created_graphs if graph['index']!=delete_chart]
         
-    return layout, children
+    return layout, children, created_graphs
+
+# auto-refreshing run number to most recent
+
+@app.callback(
+    [Output('run-selection', 'options'),
+    Output('run-selection', 'value')],
+    Input('interval-component', 'n_intervals'),
+    prevent_initial_call=True
+)
+def update_metrics(n_intervals):
+
+        df, numerical_columns, one_dimensional_columns, two_dimensional_columns = fetch_data()
+        run_options = [{'label': number, 'value': number} for number in df.index.values]
+        selected_run = run_options[0]['value']
+
+        return run_options, selected_run
+
+# when run is changed, save and load again with new run number
+
+@app.callback(
+    Output('save-button', 'n_clicks'),
+    Input('run-selection', 'value')
+)
+def update_with_run(selected_run):
+
+    return 1
+
+# auto-refresh toggle on/off
+
+@app.callback(
+    Output('interval-component', 'disabled'),
+    Output('my-toggle-switch-output', 'children'),
+    Input('my-toggle-switch', 'value'),
+)
+def toggle_interval(on):
+    if on:
+        return False, "Auto refresh is ON."
+    else:
+        return True, "Auto refresh is OFF."
+
+# modal open and close
+
+@app.callback(
+    Output({'type': 'modal', 'index':MATCH}, 'is_open'),
+    [Input({'type': 'open-modal-btn', 'index':MATCH}, "n_clicks"), Input({'type': 'close-modal-btn', 'index':MATCH}, "n_clicks")],
+    [State({'type': 'modal', 'index':MATCH}, "is_open")],
+)
+def toggle_modal(open_clicks, close_clicks, is_open):
+    if open_clicks or close_clicks:
+        return not is_open
+    return is_open
+
+# get observable from checklist to dropdown that creates chart
+
+@app.callback(
+    Output('errors', 'children'),
+    Output('chart-type-dropdown', 'value', allow_duplicate=True),
+    Input({'type': 'open-modal-btn', 'index':0}, "n_clicks"),
+    State({'type': 'checklist', 'index':ALL}, 'value'),
+    prevent_initial_call=True
+)
+def get_observable(n_clicks, values):
+    if n_clicks:
+
+        flat_list = [item for sublist in values if sublist is not None for item in sublist if item is not None]
+        print(flat_list)
+        print(one_dimensional_columns)
+        print(two_dimensional_columns)
+
+        def get_column_type(element):
+            if element in numerical_columns:
+                return "numerical_columns"
+            elif element in one_dimensional_columns:
+                return "one_dimensional_columns"
+            elif element in two_dimensional_columns:
+                return "two_dimensional_columns"
+            
+        types = [get_column_type(item) for item in flat_list]
+        print(types)
+
+        if len(flat_list)>2:
+            return 'too many observables', None
+            
+        elif len(flat_list)==2 and types[0]!=types[1]:
+            return 'different types', None
+
+        else:
+            if types[0]=="numerical_columns":
+                return 'create chart', None
+            elif types[0]=="one_dimensional_columns":
+                return 'create chart', 'histogram'
+            elif types[0]=="two_dimensional_columns":
+                return 'create chart', 'image-plot'
 
 
+        return 'create chart', None
 
 if __name__ == "__main__":
     app.run_server(debug=True, dev_tools_hot_reload=False)

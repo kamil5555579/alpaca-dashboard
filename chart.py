@@ -6,21 +6,13 @@ from plot import scatter_fig, histogram_fig, surface_fig
 
 
 def create_chart_options(type, x_val=None, y_val=None, z_val=None, image=None,
-                          numerical_variable_options=None, histogram_options=None, image_options=None):
-    """if type=='3d-plot': 
-        new_element = html.Div(
-            children=[
-                dcc.Dropdown(id='3d-x-selection', options=numerical_variable_options, value=x_val, className='dropdown'),
-                dcc.Dropdown(id='3d-y-selection', options=numerical_variable_options, value=y_val, className='dropdown'),
-                dcc.Dropdown(id='3d-z-selection', options=numerical_variable_options, value=z_val, className='dropdown')
-            ],
-            className='graph-div'
-        )"""
+                          numerical_options=None, one_dimensional_options=None, image_options=None):
+
     if type=='histogram': 
         new_element = html.Div(
             children=[
-                dcc.Dropdown(id='x-selection', options=histogram_options, value=x_val, className='dropdown'),
-                dcc.Dropdown(id='y-selection', options=numerical_variable_options, value=y_val, className='dropdown', style={'display':'none'})
+                dcc.Dropdown(id='x-selection', options=one_dimensional_options, value=x_val, className='dropdown'),
+                dcc.Dropdown(id='y-selection', options=numerical_options, value=y_val, className='dropdown', style={'display':'none'})
             ],
             className='options-div'
         )
@@ -28,15 +20,15 @@ def create_chart_options(type, x_val=None, y_val=None, z_val=None, image=None,
         new_element = html.Div(
             children=[
                 dcc.Dropdown(id='x-selection', options=image_options, value=image, className='dropdown'),
-                dcc.Dropdown(id='y-selection', options=numerical_variable_options, value=y_val, className='dropdown', style={'display':'none'})
+                dcc.Dropdown(id='y-selection', options=numerical_options, value=y_val, className='dropdown', style={'display':'none'})
             ],
             className='options-div'
         )
     if type=='scatter-plot': 
         new_element = html.Div(
             children=[
-                dcc.Dropdown(id='x-selection', options=histogram_options, value=x_val, className='dropdown'),
-                dcc.Dropdown(id='y-selection', options=histogram_options, value=y_val, className='dropdown')
+                dcc.Dropdown(id='x-selection', options=one_dimensional_options, value=x_val, className='dropdown'),
+                dcc.Dropdown(id='y-selection', options=one_dimensional_options, value=y_val, className='dropdown')
             ],
             className='options-div'
         )
@@ -46,15 +38,12 @@ def create_chart_options(type, x_val=None, y_val=None, z_val=None, image=None,
 def create_chart(chart_type, title, df, n_clicks, selected_x, selected_y, run_number):
 
     if chart_type=='image-plot':
-        img = None
+        img = px.imshow([[0]], color_continuous_scale='gray')
         if selected_x:
             data = df[selected_x][run_number]
-            if data is not None:
-                if data.any():
-                    img = px.imshow(df[selected_x][run_number], title=title, zmin=0, zmax=np.max(df[selected_x][run_number]) / 3,  #
+            if data is not None and data.any():
+                img = px.imshow(df[selected_x][run_number], title=title, zmin=0, zmax=np.max(df[selected_x][run_number]) / 3,  #
                                     color_continuous_scale='GnBu')
-        else:
-            img = px.imshow([[0]], color_continuous_scale='gray')
 
         new_element = html.Div(
             children=[html.Button('x', id={'type':'close-button',

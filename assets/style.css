@@ -31,7 +31,8 @@ body {
 }
 
 #aegis-logo {
-    max-width: 220px;
+    max-width: 230px;
+    margin-bottom: 5px;
 }
 
 #right-header {
@@ -40,6 +41,8 @@ body {
     text-align: center;
     max-width: 384px;
 	font-size: 21px;
+    display: flex;
+    flex-direction: column;
 }
 
 #draggable-area {

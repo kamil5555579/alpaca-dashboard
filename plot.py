@@ -7,18 +7,21 @@ from scipy.interpolate import griddata
 def scatter_fig(df, x_col, y_col, run, title):
         
     if run not in df[x_col].dropna().index:
-        return go.Figure()
+        fig = go.Figure()
+        fig.update_layout(title=title)
+        return fig
     
-    if run not in df[x_col].dropna().index:
-        return go.Figure()
-
+    if run not in df[y_col].dropna().index:
+        fig = go.Figure()
+        fig.update_layout(title=title)
+        return fig
     # make arrays
 
     x = df[x_col][run]
     y = df[y_col][run]
 
     fig = dict({
-            "data": [{"type": 'scatter',
+            "data": [{"type": 'scattergl',
                       "x": x,
                       "y": y,
                       "mode": 'markers',  # lines, markers
@@ -102,7 +105,9 @@ def surface_fig(df, x_col, y_col, z_col):
 def histogram_fig(df, x_col, run, title):
 
     if run not in df[x_col].dropna().index:
-        return go.Figure()
+        fig = go.Figure()
+        fig.update_layout(title=title)
+        return fig
     
     # make arrays
 

@@ -73,12 +73,27 @@ body {
     flex-grow: 0;
 }
 
+.number-div {
+    min-height: 0px;
+    min-width: 0px;
+}
+
 .options-div {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     flex-grow: 0;
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+}
+
+.legend-item {
+    display: inline-block;
+    margin: 6px;
 }
 
 .row {

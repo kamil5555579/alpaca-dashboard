@@ -37,4 +37,16 @@ def fetch_data():
 
     numerical_columns = df.select_dtypes(include='number').columns
 
-    return df, numerical_columns, one_dimensional_columns, two_dimensional_columns
+    column_dic={'numerical_columns':numerical_columns,
+            'one_dimensional_columns': one_dimensional_columns,
+            'two_dimensional_columns': two_dimensional_columns}
+
+    return df, column_dic
+
+def get_column_type(element, columns_dic):
+    if element in columns_dic['numerical_columns']:
+        return "numerical_columns"
+    elif element in columns_dic['one_dimensional_columns']:
+        return "one_dimensional_columns"
+    elif element in columns_dic['two_dimensional_columns']:
+        return "two_dimensional_columns"

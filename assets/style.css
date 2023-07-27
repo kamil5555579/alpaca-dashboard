@@ -76,6 +76,9 @@ body {
 .number-div {
     min-height: 0px;
     min-width: 0px;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 0;
 }
 
 .options-div {
@@ -108,9 +111,11 @@ body {
 
 .close-button {
     display: block;
-    width: min-content;
+    width: 20px;
+    height: 20px;
+    padding: 1px;
     margin: 2px;
-    font-size: small;
+    font-size: 10px;
 }
 
 .dropdown {

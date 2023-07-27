@@ -3,6 +3,7 @@ from dash import html, dcc
 import plotly.express as px
 import numpy as np
 from plot import scatter_fig, histogram_fig
+import dash_bootstrap_components as dbc
 
 
 def create_chart_options(type, x_val=None, y_val=None,
@@ -54,8 +55,8 @@ def create_chart(chart_type, title, df, n_clicks, selected_x, selected_y, run_nu
                                     color_continuous_scale='GnBu')
 
         new_element = html.Div(
-            children=[html.Button('x', id={'type':'close-button',
-                                 'index':n_clicks}, n_clicks=0, className='close-button'),
+            children=[dbc.Button('X', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button', color='light'),
                                  dcc.Graph(id={'type':'image-plot',
                                  'index':n_clicks}, className='graph', figure=img)],
             className='graph-div'
@@ -70,8 +71,8 @@ def create_chart(chart_type, title, df, n_clicks, selected_x, selected_y, run_nu
             fig.update_layout(title=title)
 
         new_element = html.Div(
-            children=[html.Button('x', id={'type':'close-button',
-                                 'index':n_clicks}, n_clicks=0, className='close-button'),
+            children=[dbc.Button('X', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button', color='light'),
                                  dcc.Graph(id={'type':'histogram',
                                  'index':n_clicks}, className='graph', figure=fig)],
             className='graph-div'
@@ -86,8 +87,8 @@ def create_chart(chart_type, title, df, n_clicks, selected_x, selected_y, run_nu
             fig.update_layout(title=title)
 
         new_element = html.Div(
-            children=[html.Button('x', id={'type':'close-button',
-                                 'index':n_clicks}, n_clicks=0, className='close-button'),
+            children=[dbc.Button('X', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button', color='light'),
                                  dcc.Graph(id={'type':'scatter-plot',
                                  'index':n_clicks}, className='graph', figure=fig)],
             className='graph-div'
@@ -101,8 +102,8 @@ def create_chart(chart_type, title, df, n_clicks, selected_x, selected_y, run_nu
             number = None
 
         new_element = html.Div(
-            children=[html.Button('x', id={'type':'close-button',
-                                 'index':n_clicks}, n_clicks=0, className='close-button'),
+            children=[dbc.Button('X', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button', color='light'),
                                  html.Div(id={'type':'number',
                                  'index':n_clicks}, className='graph', children=[title, ': ', number])],
             className='number-div'

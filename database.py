@@ -7,7 +7,7 @@ import numpy as np
 
 def fetch_data():
 
-    engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost/alpaca")
+    engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@host.docker.internal/alpaca")
     with engine.begin() as conn:
         query = sqlalchemy.text("""SELECT * FROM alpaca
                                 ORDER BY "Run_Number Run_Number __value" DESC

@@ -10,6 +10,7 @@ from tree import create_tree, generate_legend
 
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 
 # get all the data and types of columns
 df, columns_dic = fetch_data()
@@ -332,7 +333,7 @@ def destroy_graph(n_clicks, children, layout, created_graphs):
 )
 def update_metrics(n_intervals):
 
-        df, numerical_columns, one_dimensional_columns, two_dimensional_columns = fetch_data()
+        df, columns_dic = fetch_data()
         run_options = [{'label': number, 'value': number} for number in df.index.values]
         selected_run = run_options[0]['value']
 
@@ -435,5 +436,5 @@ def get_observable(n_clicks, values):
         return error, chart_type, options
 
 if __name__ == "__main__":
-    app.run_server(debug=True, dev_tools_hot_reload=False)
+    app.run(host='0.0.0.0', port=8050)
 

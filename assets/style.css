@@ -37,12 +37,10 @@ body {
 
 #right-header {
     color: #000000;
-    margin: 4px;
-    text-align: center;
-    max-width: 384px;
-	font-size: 21px;
+    margin: 2px;
+	font-size: 19px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
 }
 
 #draggable-area {

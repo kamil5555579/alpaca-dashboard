@@ -7,6 +7,9 @@ import dash_bootstrap_components as dbc
 from database import fetch_data, get_column_type
 from chart import create_chart_options, create_chart
 from tree import create_tree, generate_legend
+import subprocess
+import time
+import pandas as pd
 
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -22,6 +25,28 @@ one_dimensional_options = [{'label': col, 'value': col} for col in columns_dic['
 numerical_options = [{'label': col, 'value': col} for col in columns_dic['numerical_columns']]
 chart_types = ['image-plot', 'histogram', 'scatter-plot', 'number']
 all_columns=np.concatenate((columns_dic['numerical_columns'] ,columns_dic['one_dimensional_columns'], columns_dic['two_dimensional_columns']))
+
+# f
+
+def serialize_df(df):
+    # Convert NumPy arrays with nan to lists
+    for column in df.columns:
+        if df[column].dtype == object and df[column].apply(type).eq(np.ndarray).any():
+            df[column] = df[column].apply(lambda arr: arr.tolist() if isinstance(arr, np.ndarray) else arr)
+
+    # Convert DataFrame to JSON string
+    json_str = df.to_json(orient='split')
+    return json_str
+
+def deserialize_df(json_str):
+    # Convert JSON string back to DataFrame
+    df = pd.read_json(json_str, orient='split')
+
+    # Convert lists back to NumPy arrays
+    for column in df.columns:
+        df[column] = df[column].apply(np.array)
+
+    return df
 
 # modals (for creating user and creating chart)
 
@@ -82,14 +107,23 @@ mid_header = html.Div(id='mid-header', children=[
 # right header
 
 right_header = html.Div(children=[
-            html.Img(src='assets/AEgIS-logo.png', id='aegis-logo'),
-            html.Div(className='row', children=['Run: ',
-            dcc.Dropdown(id='run-selection', options=df.index,
+            html.Div(className='column', style={'text-align': 'center', 'margin-right': '17px'}, children=[
+                html.Img(src='assets/AEgIS-logo.png', id='aegis-logo'),
+                html.Div(className='row', children=['Run: ',
+                dcc.Dropdown(id='run-selection', options=df.index,
                         value=df.index[0], clearable=False,
                         style={'width':'170px', 'margin-bottom': '5px', 'font-size': 'large'})]),
-            daq.ToggleSwitch(id='my-toggle-switch', value=False),
-            html.Div(id='my-toggle-switch-output'),
-            dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)],
+                daq.ToggleSwitch(id='my-toggle-switch', value=False),
+                html.Div(id='my-toggle-switch-output')
+                    ]),
+                html.Div(className='column', children=[
+                html.Div('Specify the runs:'),
+                dbc.Input(type='number', placeholder='first run', class_name='dropdown', id='first-run'),
+                dbc.Input(type='number', placeholder='last run', class_name='dropdown', id='last-run'),
+                dbc.Button('Search', id='search-button', n_clicks=0, color="primary", className="button"),
+                dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)
+                    ]),
+                ],
             id='right-header')
 
 ############################# 
@@ -109,7 +143,7 @@ app.layout = html.Div([
                 dbc.Button("Create", id={'type': 'open-modal-btn', 'index':0}, color="primary", style={'margin': '10px 10px 10px 0px'}),
                 generate_legend(),
                 create_tree(all_columns, columns_dic=columns_dic)])
-            ]), dcc.Store(id='created-graphs', data=[]), modals
+            ]), dcc.Store(id='created-graphs', data=[]), dcc.Store(id='dataframe'), modals
             ])
 
 
@@ -155,9 +189,12 @@ def update_options(chart_type):
     State('y-selection', 'value'),
     State('run-selection', 'value'),
     State('chart-title', 'value'),
+    State('dataframe', 'data'),
     prevent_initial_call=True
 )
-def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, selected_x, selected_y, selected_run, title):
+def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, selected_x, selected_y, selected_run, title, df):
+
+    df=deserialize_df(df)
 
     if n_clicks and is_open:
         is_open=False
@@ -225,9 +262,12 @@ def save_position(n_clicks, layout, dash_name, created_graphs):
     Input('load-button', 'n_clicks'),
     State('dashboard-name-dropdown', 'value'),
     State('run-selection', 'value'),
+    State('dataframe', 'data'),
     prevent_initial_call=True
 )
-def load_position(n_clicks, dash_name, selected_run):
+def load_position(n_clicks, dash_name, selected_run, df):
+
+    df=deserialize_df(df)
 
     if dash_name:
         with open('assets/data.json', 'r') as file:
@@ -327,9 +367,10 @@ def destroy_graph(n_clicks, children, layout, created_graphs):
 
 @app.callback(
     [Output('run-selection', 'options'),
-    Output('run-selection', 'value')],
+    Output('run-selection', 'value'),
+    Output('dataframe', 'data', allow_duplicate=True)],
     Input('interval-component', 'n_intervals'),
-    prevent_initial_call=True
+    prevent_initial_call='initial_duplicate'
 )
 def update_metrics(n_intervals):
 
@@ -337,7 +378,7 @@ def update_metrics(n_intervals):
         run_options = [{'label': number, 'value': number} for number in df.index.values]
         selected_run = run_options[0]['value']
 
-        return run_options, selected_run
+        return run_options, selected_run, serialize_df(df)
 
 # when run is changed, save and load again with new run number
 
@@ -434,7 +475,39 @@ def get_observable(n_clicks, values):
                                         image_options=image_options, one_dimensional_options=one_dimensional_options)
 
         return error, chart_type, options
+    
+@app.callback(
+    Output('run-selection', 'options', allow_duplicate=True),
+    Output('run-selection', 'value', allow_duplicate=True),
+    Output('dataframe', 'data', allow_duplicate=True),
+    Input('search-button', 'n_clicks'),
+    State('dataframe', 'data'),
+    State('first-run', 'value'),
+    State('last-run', 'value'),
+    prevent_initial_call=True
+)
+def run_tool(n_clicks, df, first_run, last_run):
+    if n_clicks > 0 and first_run is not None and last_run is not None:
+        # Prepare the command to invoke the tool with inputs
+        command = f'c:/programowanie/python-analyses/venv/Scripts/python.exe c:/programowanie/python-analyses/ALPACA/applications/alpaca_to_database.py --first_run {first_run} --last_run {last_run}'
+
+        try:
+            # Execute the command and wait for it to finish
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            print(result.stdout.decode())
+            print(result.stderr.decode())
+            
+            time.sleep(2)
+            # Subprocess finished without error, now fetch the data
+            df, columns_dic = fetch_data(first_run=first_run, last_run=last_run)
+        
+        except subprocess.CalledProcessError as e:
+            # Handle subprocess error
+            print(f'Error: Subprocess returned non-zero exit code: {e.returncode}')
+
+        return df.index, df.index[0], serialize_df(df)
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8050)
+    app.run(host='0.0.0.0', port=8050, debug=True, dev_tools_hot_reload=False)
 

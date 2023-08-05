@@ -1,0 +1,21 @@
+version: '3'
+services:
+  app:
+      build:
+        context: alpaca-dashboard
+      ports:
+         - "5000:5000"
+      links:
+      - db
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    ports:
+      - "80:80"

@@ -2,15 +2,22 @@ version: '3'
 services:
   app:
       build:
-        context: alpaca-dashboard
+        context: .
+        dockerfile: Dockerfile
       ports:
          - "5000:5000"
       links:
-      - db
+          - db
   db:
     image: postgres:latest
     environment:
-      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: alpaca
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
   nginx:
     image: nginx:latest
     volumes:
@@ -19,3 +26,5 @@ services:
       - app
     ports:
       - "80:80"
+volumes:
+  postgres_data:

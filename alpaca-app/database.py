@@ -7,7 +7,7 @@ import numpy as np
 
 def fetch_data(first_run=None, last_run=None):
 
-    engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost/alpaca") # host.docker.internal instead of localhost for docker
+    engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@db:5432/alpaca") # host.docker.internal instead of localhost for docker
     with engine.begin() as conn:
         if first_run is not None and last_run is not None:
             query = sqlalchemy.text("""SELECT * FROM alpaca

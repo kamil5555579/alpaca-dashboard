@@ -109,15 +109,20 @@ mid_header = html.Div(id='mid-header', children=[
 right_header = html.Div(children=[
             html.Div(className='column', style={'text-align': 'center', 'margin-right': '17px'}, children=[
                 html.Img(src='assets/AEgIS-logo.png', id='aegis-logo'),
-                html.Div(className='row', children=['Run: ',
-                dcc.Dropdown(id='run-selection', options=df.index,
+                html.Div(className='row', children=[
+                dcc.Loading(style={'float':'left'}, children=[
+                    'Run:',
+                    dcc.Dropdown(id='run-selection', options=df.index,
                         value=df.index[0], clearable=False,
-                        style={'width':'170px', 'margin-bottom': '5px', 'font-size': 'large'})]),
+                        style={'width':'170px', 'margin-bottom': '5px', 'font-size': 'large', 'float':'right'})
+                ])
+                        ]),
                 daq.ToggleSwitch(id='my-toggle-switch', value=False),
                 html.Div(id='my-toggle-switch-output')
                     ]),
                 html.Div(className='column', children=[
                 html.Div('Specify the runs:'),
+                dcc.Checklist(id='from-alpaca', options=[{'label':'From Alpaca', 'value': True}], style={'font-size':'small'}),
                 dbc.Input(type='number', placeholder='first run', class_name='dropdown', id='first-run'),
                 dbc.Input(type='number', placeholder='last run', class_name='dropdown', id='last-run'),
                 dbc.Button('Search', id='search-button', n_clicks=0, color="primary", className="button"),
@@ -484,20 +489,22 @@ def get_observable(n_clicks, values):
     State('dataframe', 'data'),
     State('first-run', 'value'),
     State('last-run', 'value'),
+    State('from-alpaca', 'value'),
     prevent_initial_call=True
 )
-def run_tool(n_clicks, df, first_run, last_run):
+def run_tool(n_clicks, df, first_run, last_run, from_alpaca):
     if n_clicks > 0 and first_run is not None and last_run is not None:
         # Prepare the command to invoke the tool with inputs
         command = f'c:/programowanie/python-analyses/venv/Scripts/python.exe c:/programowanie/python-analyses/ALPACA/applications/alpaca_to_database.py --first_run {first_run} --last_run {last_run}'
 
         try:
-            # Execute the command and wait for it to finish
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            print(result.stdout.decode())
-            print(result.stderr.decode())
-            
-            time.sleep(2)
+            if from_alpaca:
+                # Execute the command and wait for it to finish
+                result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                print(result.stdout.decode())
+                print(result.stderr.decode())
+                
+                time.sleep(2)
             # Subprocess finished without error, now fetch the data
             df, columns_dic = fetch_data(first_run=first_run, last_run=last_run)
         

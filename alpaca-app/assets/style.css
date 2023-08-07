@@ -7,9 +7,9 @@ body {
 /* Header styling */
 #header-area {
     background-color: rgb(254, 254, 254);
-    height: 200px;
+    height: 210px;
 	margin:0;
-	padding:20px;
+	padding:15px;
     display: flex;
     flex-direction: row;
 }
@@ -31,7 +31,7 @@ body {
 }
 
 #aegis-logo {
-    max-width: 230px;
+    max-width: 240px;
     margin-bottom: 5px;
 }
 

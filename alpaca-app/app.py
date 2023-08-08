@@ -4,10 +4,9 @@ import dash_draggable
 import json
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-from database import fetch_data, get_column_type
+from database import fetch_data, get_column_type, execute_alpaca_script, wait_for_database
 from chart import create_chart_options, create_chart
 from tree import create_tree, generate_legend
-import subprocess
 import time
 import pandas as pd
 
@@ -15,8 +14,17 @@ import pandas as pd
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-# get all the data and types of columns
-df, columns_dic = fetch_data()
+# initial data from alpaca
+execute_alpaca_script(387116, 387117)
+
+# Wait for database to be ready
+if wait_for_database("alpaca"):
+    print("Database is ready, executing query...")
+    time.sleep(2)
+    # get all the data and types of columns
+    df, columns_dic = fetch_data()
+else:
+    print("Database did not become ready within the specified time.")
 
 # dropdowns options
 run_options = [{'label': number, 'value': number} for number in df.index.values]
@@ -495,23 +503,14 @@ def get_observable(n_clicks, values):
 def run_tool(n_clicks, df, first_run, last_run, from_alpaca):
     if n_clicks > 0 and first_run is not None and last_run is not None:
         # Prepare the command to invoke the tool with inputs
-        command = f'c:/programowanie/python-analyses/venv/Scripts/python.exe c:/programowanie/python-analyses/ALPACA/applications/alpaca_to_database.py --first_run {first_run} --last_run {last_run}'
 
-        try:
-            if from_alpaca:
-                # Execute the command and wait for it to finish
-                result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                print(result.stdout.decode())
-                print(result.stderr.decode())
-                
-                time.sleep(2)
+        if from_alpaca:
+            # Execute the command and wait for it to finish
+            execute_alpaca_script(first_run, last_run)
+            time.sleep(2)
             # Subprocess finished without error, now fetch the data
             df, columns_dic = fetch_data(first_run=first_run, last_run=last_run)
         
-        except subprocess.CalledProcessError as e:
-            # Handle subprocess error
-            print(f'Error: Subprocess returned non-zero exit code: {e.returncode}')
-
         return df.index, df.index[0], serialize_df(df)
 
 

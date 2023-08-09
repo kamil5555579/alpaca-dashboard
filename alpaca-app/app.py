@@ -4,57 +4,34 @@ import dash_draggable
 import json
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-from database import fetch_data, get_column_type, execute_alpaca_script, wait_for_database
-from chart import create_chart_options, create_chart
+from database import initial_fetch_data, fetch_run, get_column_type, execute_alpaca_script, wait_for_database
+from chart import create_chart_options, create_chart, serialize_df, deserialize_df
 from tree import create_tree, generate_legend
 import time
-import pandas as pd
-
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 # initial data from alpaca
-execute_alpaca_script(387116, 387117)
+# execute_alpaca_script(387116, 387117)
 
 # Wait for database to be ready
 if wait_for_database("alpaca"):
     print("Database is ready, executing query...")
-    time.sleep(2)
+    time.sleep(1)
     # get all the data and types of columns
-    df, columns_dic = fetch_data()
+    runs, columns_dic = initial_fetch_data()
 else:
     print("Database did not become ready within the specified time.")
 
 # dropdowns options
-run_options = [{'label': number, 'value': number} for number in df.index.values]
+run_options = [{'label': number, 'value': number} for number in runs]
 image_options = [{'label': col, 'value': col} for col in columns_dic['two_dimensional_columns']]
 one_dimensional_options = [{'label': col, 'value': col} for col in columns_dic['one_dimensional_columns']]
 numerical_options = [{'label': col, 'value': col} for col in columns_dic['numerical_columns']]
 chart_types = ['image-plot', 'histogram', 'scatter-plot', 'number']
 all_columns=np.concatenate((columns_dic['numerical_columns'] ,columns_dic['one_dimensional_columns'], columns_dic['two_dimensional_columns']))
 
-# f
-
-def serialize_df(df):
-    # Convert NumPy arrays with nan to lists
-    for column in df.columns:
-        if df[column].dtype == object and df[column].apply(type).eq(np.ndarray).any():
-            df[column] = df[column].apply(lambda arr: arr.tolist() if isinstance(arr, np.ndarray) else arr)
-
-    # Convert DataFrame to JSON string
-    json_str = df.to_json(orient='split')
-    return json_str
-
-def deserialize_df(json_str):
-    # Convert JSON string back to DataFrame
-    df = pd.read_json(json_str, orient='split')
-
-    # Convert lists back to NumPy arrays
-    for column in df.columns:
-        df[column] = df[column].apply(np.array)
-
-    return df
 
 # modals (for creating user and creating chart)
 
@@ -120,8 +97,8 @@ right_header = html.Div(children=[
                 html.Div(className='row', children=[
                 dcc.Loading(style={'float':'left'}, children=[
                     'Run:',
-                    dcc.Dropdown(id='run-selection', options=df.index,
-                        value=df.index[0], clearable=False,
+                    dcc.Dropdown(id='run-selection', options=run_options,
+                        value=run_options[0]['value'], clearable=False,
                         style={'width':'170px', 'margin-bottom': '5px', 'font-size': 'large', 'float':'right'})
                 ])
                         ]),
@@ -200,21 +177,19 @@ def update_options(chart_type):
     State('created-graphs', 'data'),
     State('x-selection', 'value'),
     State('y-selection', 'value'),
-    State('run-selection', 'value'),
     State('chart-title', 'value'),
     State('dataframe', 'data'),
     prevent_initial_call=True
 )
-def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, selected_x, selected_y, selected_run, title, df):
-
-    df=deserialize_df(df)
+def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, selected_x, selected_y, title, df):
 
     if n_clicks and is_open:
+        df=deserialize_df(df)
         is_open=False
         if chart_type is None:
             return existing_children, None, existing_data, None, is_open
 
-        new_element, chart_dic = create_chart(chart_type, title, df, n_clicks, selected_x, selected_y, selected_run)
+        new_element, chart_dic = create_chart(chart_type, title, df, n_clicks, selected_x, selected_y)
         existing_data.append(chart_dic)
         existing_children.append(new_element)
     
@@ -274,15 +249,15 @@ def save_position(n_clicks, layout, dash_name, created_graphs):
     Output('created-graphs', 'data', allow_duplicate=True),],
     Input('load-button', 'n_clicks'),
     State('dashboard-name-dropdown', 'value'),
-    State('run-selection', 'value'),
     State('dataframe', 'data'),
     prevent_initial_call=True
 )
-def load_position(n_clicks, dash_name, selected_run, df):
-
-    df=deserialize_df(df)
+def load_position(n_clicks, dash_name, df):
 
     if dash_name:
+        
+        df=deserialize_df(df)
+
         with open('assets/data.json', 'r') as file:
             loaded_data = json.load(file)
 
@@ -303,7 +278,7 @@ def load_position(n_clicks, dash_name, selected_run, df):
             if 'y_val' in element.keys():
                 y_val=element['y_val']
 
-            new_chart, chart_dic = create_chart(type, title, df, index, x_val, y_val, selected_run)
+            new_chart, chart_dic = create_chart(type, title, df, index, x_val, y_val)
 
             children.append(new_chart)
             created_graphs.append(chart_dic)
@@ -380,18 +355,29 @@ def destroy_graph(n_clicks, children, layout, created_graphs):
 
 @app.callback(
     [Output('run-selection', 'options'),
-    Output('run-selection', 'value'),
-    Output('dataframe', 'data', allow_duplicate=True)],
+    Output('run-selection', 'value')],
     Input('interval-component', 'n_intervals'),
     prevent_initial_call='initial_duplicate'
 )
 def update_metrics(n_intervals):
 
-        df, columns_dic = fetch_data()
-        run_options = [{'label': number, 'value': number} for number in df.index.values]
-        selected_run = run_options[0]['value']
+    runs, columns_dic = initial_fetch_data()
+    run_options = [{'label': number, 'value': number} for number in runs]
+    selected_run = run_options[0]['value']
 
-        return run_options, selected_run, serialize_df(df)
+    return run_options, selected_run
+
+# run-selection callback
+
+@app.callback(
+    Output('dataframe', 'data'),
+    Input('run-selection', 'value')
+)
+def update_df_from_run(selected_run):
+
+    df=fetch_run(selected_run)
+
+    return serialize_df(df)
 
 # when run is changed, save and load again with new run number
 
@@ -489,10 +475,11 @@ def get_observable(n_clicks, values):
 
         return error, chart_type, options
     
+# search for specified runs
+
 @app.callback(
     Output('run-selection', 'options', allow_duplicate=True),
     Output('run-selection', 'value', allow_duplicate=True),
-    Output('dataframe', 'data', allow_duplicate=True),
     Input('search-button', 'n_clicks'),
     State('dataframe', 'data'),
     State('first-run', 'value'),
@@ -507,12 +494,14 @@ def run_tool(n_clicks, df, first_run, last_run, from_alpaca):
         if from_alpaca:
             # Execute the command and wait for it to finish
             execute_alpaca_script(first_run, last_run)
-            time.sleep(2)
-            
+            time.sleep(1)
+
         # Subprocess finished without error, now fetch the data
-        df, columns_dic = fetch_data(first_run=first_run, last_run=last_run)
+        runs, columns_dic = initial_fetch_data(first_run=first_run, last_run=last_run)
+        run_options = [{'label': number, 'value': number} for number in runs]
+        selected_run = run_options[0]['value']
         
-        return df.index, df.index[0], serialize_df(df)
+        return run_options, selected_run
 
 
 if __name__ == "__main__":

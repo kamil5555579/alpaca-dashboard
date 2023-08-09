@@ -4,21 +4,20 @@ from scipy.interpolate import griddata
 
 # plotting functions taken from alpaca
 
-def scatter_fig(df, x_col, y_col, run, title):
+def scatter_fig(df, x_col, y_col, title):
         
-    if run not in df[x_col].dropna().index:
+    if df[x_col].iloc[0].any() and df[y_col].iloc[0].any():
+
+        # make arrays
+        x = df[x_col].iloc[0]
+        y = df[y_col].iloc[0]
+
+    else:
+
         fig = go.Figure()
         fig.update_layout(title=title)
         return fig
     
-    if run not in df[y_col].dropna().index:
-        fig = go.Figure()
-        fig.update_layout(title=title)
-        return fig
-    # make arrays
-
-    x = df[x_col][run]
-    y = df[y_col][run]
 
     fig = dict({
             "data": [{"type": 'scattergl',
@@ -102,24 +101,25 @@ def surface_fig(df, x_col, y_col, z_col):
         })
     return fig
 
-def histogram_fig(df, x_col, run, title):
+def histogram_fig(df, x_col, title):
 
-    if run not in df[x_col].dropna().index:
+    if df[x_col].iloc[0].any():
+
+        # make arrays
+        x = df[x_col].iloc[0]
+        y = None
+
+    else:
+        
         fig = go.Figure()
         fig.update_layout(title=title)
         return fig
-    
-    # make arrays
-
-    x = df[x_col][run]
-    y=None
 
     fig = dict({
             "data": [{"type": 'histogram',
                       "x": x,
                       "y": y,
                       "histfunc": "count",
-                      "name": run,
                       "orientation": "v",
                       "textfont": {"size": 45},
                       "xbins": {"size": 0.1}  # Scintillator time resolution: 0.0000001

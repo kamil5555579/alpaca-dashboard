@@ -23,12 +23,6 @@ RUN venv/bin/pip install --no-cache-dir -r requirements.txt
 # Set the PYTHONPATH to include the ALPACA module's root directory
 ENV PYTHONPATH="/app/python-analyses:$PYTHONPATH"
 
-# Set the working directory to the directory containing the script
-WORKDIR /app/python-analyses/ALPACA/applications
-
-# Initialize alpaca table in alpaca database
-#RUN /app/python-analyses/venv/bin/python alpaca_to_database.py --first_run 387116 --last_run 387117
-
 # Change to the app directory
 WORKDIR /app/alpaca-app
 

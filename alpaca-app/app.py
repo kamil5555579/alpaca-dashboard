@@ -508,8 +508,9 @@ def run_tool(n_clicks, df, first_run, last_run, from_alpaca):
             # Execute the command and wait for it to finish
             execute_alpaca_script(first_run, last_run)
             time.sleep(2)
-            # Subprocess finished without error, now fetch the data
-            df, columns_dic = fetch_data(first_run=first_run, last_run=last_run)
+            
+        # Subprocess finished without error, now fetch the data
+        df, columns_dic = fetch_data(first_run=first_run, last_run=last_run)
         
         return df.index, df.index[0], serialize_df(df)
 

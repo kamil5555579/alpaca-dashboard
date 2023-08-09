@@ -8,8 +8,18 @@ from database import initial_fetch_data, fetch_run, get_column_type, execute_alp
 from chart import create_chart_options, create_chart, serialize_df, deserialize_df
 from tree import create_tree, generate_legend
 import time
+import dash_auth
+
+# Keep this out of source code repository - save in a file or a database
+VALID_USERNAME_PASSWORD_PAIRS = {
+    'hello': 'world'
+}
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+auth = dash_auth.BasicAuth(
+    app,
+    VALID_USERNAME_PASSWORD_PAIRS
+)
 server = app.server
 
 # initial data from alpaca

@@ -1,10 +1,11 @@
-from dash import Dash, html, dcc, callback, Output, Input, State, MATCH, ALL, ctx, callback_context
+from dash import Dash, html, dcc, callback, Output, Input, State, MATCH, ALL, callback_context
 import numpy as np
 import dash_draggable
 import json
 import dash_daq as daq
 import dash_bootstrap_components as dbc
 from database import initial_fetch_data, fetch_run, get_column_type, execute_alpaca_script, wait_for_database
+from dashboards import save_or_update_dashboard, dashboard_name_exists, get_dashboard_by_name, get_all_dashboard_names
 from chart import create_chart_options, create_chart, serialize_df, deserialize_df
 from tree import create_tree, generate_legend
 import time
@@ -217,36 +218,9 @@ def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, s
 )
 def save_position(n_clicks, layout, dash_name, created_graphs):
     
-    if dash_name:
-
-        all_elements=created_graphs
-        all_data=[]
-
-        try:
-            with open('assets/data.json', 'r') as file:
-                all_data = json.load(file)
-        except FileNotFoundError:
-            # If the file doesn't exist, continue with an empty list
-            pass
-
-        if all_elements==[]:
-            return 1
+    if dash_name and created_graphs:
         
-        pos = layout
-
-        found_dash=False
-        for dash in all_data:
-            if dash['name'] == dash_name:
-                dash['elements']=all_elements
-                dash['pos']=pos
-                found_dash=True
-
-        if not found_dash:
-            data={'name': dash_name, 'elements':all_elements, 'pos':pos}
-            all_data.append(data)
-            
-        with open('assets/data.json', 'w') as file:
-            json.dump(all_data, file)
+        save_or_update_dashboard(dashboard_name=dash_name, elements=created_graphs, layout=layout)
 
     return 1
     
@@ -268,18 +242,16 @@ def load_position(n_clicks, dash_name, df):
         
         df=deserialize_df(df)
 
-        with open('assets/data.json', 'r') as file:
-            loaded_data = json.load(file)
-
-        loaded_data = next((item for item in loaded_data if item["name"] == dash_name), None)
-
-        if loaded_data is None:
+        if not dashboard_name_exists(dash_name):
             return [], {}, 0, []
         
         children=[]
         created_graphs=[]
         n_charts=0
-        for element in loaded_data['elements']:
+
+        elements, layout = get_dashboard_by_name(dashboard_name=dash_name)
+
+        for element in elements:
             type=element['type']
             index=element['index']
             title=element['title']
@@ -294,8 +266,6 @@ def load_position(n_clicks, dash_name, df):
             created_graphs.append(chart_dic)
             if index>=n_charts:
                 n_charts=index
-
-        layout=loaded_data['pos']
 
         return children, layout, n_charts, created_graphs
     
@@ -313,10 +283,7 @@ def load_position(n_clicks, dash_name, df):
 )
 def create_new_dash(n_clicks, dash_name):
 
-    with open('assets/data.json', 'r') as file:
-            loaded_data = json.load(file)
-    
-    names_list = [item["name"] for item in loaded_data]
+    names_list = get_all_dashboard_names()
 
     options = [{'label': name, 'value': name} for name in names_list]
 

@@ -6,11 +6,13 @@ import subprocess
 import time
 import psycopg2 as ps
 
+# Create a database connection
+engine = sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
+    
 # function that selects all the data from alpaca database
 
 def initial_fetch_data(first_run=None, last_run=None):
 
-    engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
     with engine.begin() as conn:
         if first_run is not None and last_run is not None:
             query = sqlalchemy.text("""SELECT * FROM alpaca
@@ -60,7 +62,7 @@ def initial_fetch_data(first_run=None, last_run=None):
     return runs, column_dic
 
 def fetch_run(run_number):
-    engine=sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
+    
     with engine.begin() as conn:
         if run_number:
             query = sqlalchemy.text("""SELECT * FROM alpaca

@@ -13,12 +13,17 @@ class UserDashboard(Base):
     layout = Column(JSON, nullable=False)
 
 # Create a database connection
-engine = create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
+engine = create_engine("postgresql+psycopg2://postgres:admin@db:5432/alpaca") # db instead of localhost for docker
 
 # Create tables (if they don't exist)
 Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
+
+# Commit the table creation
+session = Session()
+session.commit()
+session.close()
 
 def save_or_update_dashboard(dashboard_name, elements, layout):
     elements_json = json.dumps(elements)

@@ -7,7 +7,7 @@ import time
 import psycopg2 as ps
 
 # Create a database connection
-engine = sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
+engine = sqlalchemy.create_engine("postgresql+psycopg2://postgres:admin@db:5432/alpaca") # db instead of localhost for docker
     
 # function that selects all the data from alpaca database
 
@@ -105,7 +105,7 @@ def execute_alpaca_script(first_run, last_run):
     ]
 
     #local command
-    command = f'c:/programowanie/alpaca-dashboard/python-analyses/venv/Scripts/python.exe c:/programowanie/alpaca-dashboard/python-analyses/ALPACA/applications/alpaca_to_database.py --first_run {first_run} --last_run {last_run}'
+    #command = f'c:/programowanie/alpaca-dashboard/python-analyses/venv/Scripts/python.exe c:/programowanie/alpaca-dashboard/python-analyses/ALPACA/applications/alpaca_to_database.py --first_run {first_run} --last_run {last_run}'
 
     try:
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
@@ -118,7 +118,7 @@ def execute_alpaca_script(first_run, last_run):
 def wait_for_database(table_name, max_attempts=10, retry_interval=5):
     attempts = 0
     conn_params = {
-    "host": "localhost", # db or localhost
+    "host": "db", # db or localhost
     "dbname": "alpaca",
     "user": "postgres",
     "password": "admin",

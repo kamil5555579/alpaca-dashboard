@@ -13,7 +13,7 @@ class UserDashboard(Base):
     layout = Column(JSON, nullable=False)
 
 # Create a database connection
-engine = create_engine("postgresql+psycopg2://postgres:admin@db:5432/alpaca") # db instead of localhost for docker
+engine = create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
 
 # Create tables (if they don't exist)
 Base.metadata.create_all(engine)

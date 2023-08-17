@@ -353,8 +353,9 @@ def update_metrics(n_intervals):
 def update_df_from_run(selected_run):
 
     df=fetch_run(selected_run)
+    data = serialize_df(df)
 
-    return serialize_df(df)
+    return data
 
 # when run is changed, save and load again with new run number
 

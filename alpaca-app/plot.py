@@ -30,7 +30,7 @@ def scatter_fig(df, x_col, y_col, title):
                       "name": y_col,
                       "showlegend": False}  # default: False
                      ],
-            "layout": {"barmode": "stack", "title": {"text": title+df.index, "font": {"size": 20}},
+            "layout": {"barmode": "stack", "title": {"text": title+str(df.index.tolist()), "font": {"size": 20}},
                        "legend": {"bgcolor": '#FFFFFF', "bordercolor": '#ff0000', "font": {"size": 25},
                                   "orientation": 'v'},
                        "xaxis": {"title": {"text": x_col, "font": {"size": 15}},

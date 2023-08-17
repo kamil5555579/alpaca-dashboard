@@ -24,7 +24,7 @@ auth = dash_auth.BasicAuth(
 server = app.server
 
 # initial data from alpaca
-# execute_alpaca_script(387116, 387117)
+execute_alpaca_script(387116, 387116)
 
 # Wait for database to be ready
 if wait_for_database("alpaca"):

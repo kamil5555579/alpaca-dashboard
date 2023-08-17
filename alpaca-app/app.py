@@ -344,28 +344,20 @@ def update_metrics(n_intervals):
 
     return run_options, selected_run
 
-# run-selection callback
-
-@app.callback(
-    Output('dataframe', 'data'),
-    Input('run-selection', 'value')
-)
-def update_df_from_run(selected_run):
-
-    df=fetch_run(selected_run)
-    data = serialize_df(df)
-
-    return data
 
 # when run is changed, save and load again with new run number
 
 @app.callback(
+    Output('dataframe', 'data'),
     Output('save-button', 'n_clicks'),
     Input('run-selection', 'value')
 )
 def update_with_run(selected_run):
 
-    return 1
+    df=fetch_run(selected_run)
+    data = serialize_df(df)
+
+    return data, 1
 
 # auto-refresh toggle on/off
 

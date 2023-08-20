@@ -7,4 +7,5 @@ at CERNs Antiproton Decelerator (AD). This tool allows users to create interacti
 
 ## Preview of the app
 
+![](dash_preview.gif)
 <img src="dash_preview.gif"/>

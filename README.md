@@ -37,12 +37,23 @@ Data from ALPACA is stored in a PostgreSQL database instance. A script - command
 - keep track of observable’s data types which means preserving their shape when inserting to database
 
 ### Architecture
+Layout of communication between the instances inside of the project:
 <img src="app_architecture.png"/>
 
 There are two ways in which data gets inserted to the database. Firstly, ALPACA always inserts the data from the newest run when that run has finished and the data is available (*continous_analyses.py*). The other way is that application itself activates *alpaca_to_database.py* script that updates the database for the specified run numbers (this is done by the *Specify the runs* with *From Alpaca* checked). Then the application can select the data from the database. For the purpose of environment isolation, future deployment and scalability the whole application (Dash/Flask app, PostgreSQL instance and ALPACA) runs in a [Docker](https://www.docker.com/) container. 
 
+---
+
 ## Online accessibility
+A standard scheme for deploying a Python web application:
+<img src="python_server.png"/>
+
+Flask is a WSGI (Web Server Gateway Interface) application. A WSGI server is used to run the application, converting incoming HTTP requests to the standard WSGI environ, and converting outgoing WSGI responses to HTTP responses. Flask has a built-in development WSGI server but it should not be used in production, instead one should use a dedicated production WSGI server like [Gunicorn](https://gunicorn.org/). Gunicorn is a pure Python WSGI server with simple configuration and multiple worker implementations for performance tuning.
+
+WSGI servers have HTTP servers built-in. However, a dedicated HTTP server like [Nginx](https://nginx.org/) may be safer, more efficient, or more capable. Putting an HTTP server in front of the WSGI server is called a *reverse proxy*. This *reverse proxy* can handle incoming requests, TLS, and other security and performance concerns better than the WSGI server.
+
+Implementation of WSGI in Alpaca Dashboard(s):
 <img src="contenerization.png"/>
 
-Flask is a WSGI (Web Server Gateway Interface) application. A WSGI server is used to run the application, converting incoming HTTP requests to the standard WSGI environ, and converting outgoing WSGI responses to HTTP responses. Flask has a built-in development WSGI server but it should not be used in production, instead one should use a dedicated production WSGI server like [Gunicorn](https://gunicorn.org/). Gunicorn is a pure Python WSGI server with simple configuration and multiple worker implementations for performance tuning. WSGI servers have HTTP servers built-in. However, a dedicated HTTP server like [Nginx](https://nginx.org/) may be safer, more efficient, or more capable. Putting an HTTP server in front of the WSGI server is called a “reverse proxy.”
-![python_server](https://github.com/kamil5555579/alpaca-dashboard/assets/103774497/1813e323-283f-491e-ba9f-9899c9e0be63)
+Both Gunicorn and Nginx are in the same Docker container as the Alpaca Dashboard(s) application (Dash/Flask app, PostgreSQL instance and ALPACA). That allows the container to be run on a machine/server and instantly deploy the app there. The machine on which Alpaca Dashboard(s) is deployed to is *aegisonline*.
+Inside of the Docker container Gunicorn runs the application on a WSGI server on port 5000 and Nginx listens on port 80 which is the default HTTP port. Whenever somebody tries to connect to *aegisonline* (through its IP on port 80 which does not need to be specified because its default) Nginx catches that request and passes it to port 5000 where the app is running.

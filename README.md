@@ -55,5 +55,6 @@ WSGI servers have HTTP servers built-in. However, a dedicated HTTP server like [
 Implementation of WSGI in Alpaca Dashboard(s):
 <img src="contenerization.png"/>
 
-Both Gunicorn and Nginx are in the same Docker container as the Alpaca Dashboard(s) application (Dash/Flask app, PostgreSQL instance and ALPACA). That allows the container to be run on a machine/server and instantly deploy the app there. The machine on which Alpaca Dashboard(s) is deployed to is *aegisonline*.
+Both Gunicorn and Nginx are in the same Docker container as the Alpaca Dashboard(s) application (Dash/Flask app, PostgreSQL instance and ALPACA). That allows the container to be run on a machine/server and instantly deploy the app there. The machine on which Alpaca Dashboard(s) is deployed to is *aegisonline* which is a Linux Ubuntu server.
+
 Inside of the Docker container Gunicorn runs the application on a WSGI server on port 5000 and Nginx listens on port 80 which is the default HTTP port. Whenever somebody tries to connect to *aegisonline* (through its IP on port 80 which does not need to be specified because its default) Nginx catches that request and passes it to port 5000 where the app is running.

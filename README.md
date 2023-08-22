@@ -32,7 +32,7 @@ Project's objectives/features:
 The application is built mainly using the [Dash Open Source](https://dash.plotly.com/) library which is a framework for rapidly building data apps in Python and has all the tools needed to accomplish this project's objectives. Dash runs on top of another Python library - [Flask](https://flask.palletsprojects.com/en/2.3.x/) which makes the app run on a server and be available online.
 
 ### Database
-Data from ALPACA is stored in a PostgreSQL database instance. A script - command line interface has beed made in ALPACA that allows the insertion of data of specified observables and runs to a database table. The observables in the experiment are continously changing and their data type isn't consistent, they can be 1D or 2D array or just a singular number. Therefore, the script had to achieve these things:
+Data from ALPACA is stored in a [PostgreSQL](https://www.postgresql.org/) database instance. A script - command line interface has beed made in ALPACA that allows the insertion of data of specified observables and runs to a database table. The observables in the experiment are continously changing and their data type isn't consistent, they can be 1D or 2D array or just a singular number. Therefore, the script had to achieve these things:
 - automatically alter the table when new observables are added
 - keep track of observable’s data types which means preserving their shape when inserting to database
 

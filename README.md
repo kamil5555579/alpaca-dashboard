@@ -46,7 +46,7 @@ There are two ways in which data gets inserted to the database. Firstly, ALPACA 
 
 ## Online accessibility
 A standard scheme for deploying a Python web application:
-<img src="python_server.png" width="1000"/>
+<img src="python_server.png"/>
 
 Flask is a WSGI (Web Server Gateway Interface) application. A WSGI server is used to run the application, converting incoming HTTP requests to the standard WSGI environ, and converting outgoing WSGI responses to HTTP responses. Flask has a built-in development WSGI server but it should not be used in production, instead one should use a dedicated production WSGI server like [Gunicorn](https://gunicorn.org/). Gunicorn is a pure Python WSGI server with simple configuration and multiple worker implementations for performance tuning.
 

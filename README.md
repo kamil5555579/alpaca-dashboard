@@ -3,6 +3,8 @@
 Alpaca Dashboard(s) is an online visualisation tool built on top of a data analysis framework called [Alpaca](https://aegis.docs.cern.ch/ALPACA). ALl Python Analyses Code of Aegis (ALPACA) is a library written in Python for the Aegis experiment
 at CERNs Antiproton Decelerator (AD). This tool allows users to create interactive charts and dashboards in order to observe and analyse data from experiment runs.
 
+This is an initial version that was developed by me but now Alpaca Dashboard(s) is a part of ALPACA repository on CERN's GitLab. 
+
 ---
 
 ## Preview of the app

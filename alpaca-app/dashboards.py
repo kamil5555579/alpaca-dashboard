@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, JSON
+from sqlalchemy import create_engine, Column, Integer, String, JSON, inspect
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import json
@@ -15,8 +15,10 @@ class UserDashboard(Base):
 # Create a database connection
 engine = create_engine("postgresql+psycopg2://postgres:admin@localhost:5432/alpaca") # db instead of localhost for docker
 
-# Create tables (if they don't exist)
-Base.metadata.create_all(engine)
+# Check if the table exists before creating it
+inspector = inspect(engine)
+if not inspector.has_table(UserDashboard.__tablename__):
+    Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
 

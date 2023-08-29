@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 from dash import html, dcc
 import plotly.express as px
 import numpy as np
-from plot import scatter_fig, histogram_fig
+from plot import scatter_fig, histogram_fig, run_scatter_fig
 import dash_bootstrap_components as dbc
 import pandas as pd
 
@@ -110,6 +110,22 @@ def create_chart(chart_type, title, df, n_clicks, selected_x, selected_y):
             className='number-div'
         )
         chart_dic={'type':'number', 'index':n_clicks, 'title':title, 'x_val': selected_x}
+
+    if chart_type=='multi-run':
+        if selected_x:
+            fig = run_scatter_fig(df, selected_x, title)
+        else:
+            fig = go.Figure()
+            fig.update_layout(title=title)
+
+        new_element = html.Div(
+            children=[dbc.Button('X', id={'type':'close-button',
+                                 'index':n_clicks}, n_clicks=0, className='close-button', color='light'),
+                                 dcc.Graph(id={'type':'multi-run',
+                                 'index':n_clicks}, className='graph', figure=fig)],
+            className='graph-div'
+        )
+        chart_dic={'type':'multi-run', 'index':n_clicks, 'title':title, 'x_val': selected_x}
 
     
     return new_element, chart_dic

@@ -4,7 +4,7 @@ import dash_draggable
 import json
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-from database import initial_fetch_data, fetch_run, get_column_type, execute_alpaca_script, wait_for_database
+from database import initial_fetch_data, fetch_run, get_column_type, execute_alpaca_script, wait_for_database, fetch_column
 from dashboards import save_or_update_dashboard, dashboard_name_exists, get_dashboard_by_name, get_all_dashboard_names
 from chart import create_chart_options, create_chart, serialize_df, deserialize_df
 from tree import create_tree, generate_legend
@@ -40,7 +40,7 @@ run_options = [{'label': number, 'value': number} for number in runs]
 image_options = [{'label': col, 'value': col} for col in columns_dic['two_dimensional_columns']]
 one_dimensional_options = [{'label': col, 'value': col} for col in columns_dic['one_dimensional_columns']]
 numerical_options = [{'label': col, 'value': col} for col in columns_dic['numerical_columns']]
-chart_types = ['image-plot', 'histogram', 'scatter-plot', 'number']
+chart_types = ['image-plot', 'histogram', 'scatter-plot', 'number', 'multi-run']
 all_columns=np.concatenate((columns_dic['numerical_columns'] ,columns_dic['one_dimensional_columns'], columns_dic['two_dimensional_columns']))
 
 
@@ -192,13 +192,17 @@ def update_options(chart_type):
     State('dataframe', 'data'),
     prevent_initial_call=True
 )
-def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, selected_x, selected_y, title, df):
+def add_chart(chart_type, n_clicks, is_open, existing_children, existing_data, selected_x, selected_y, title, run_data):
 
     if n_clicks and is_open:
-        df=deserialize_df(df)
         is_open=False
         if chart_type is None:
             return existing_children, None, existing_data, None, is_open
+
+        if chart_type == 'multi-run':
+            df = fetch_column(selected_x)
+        else:
+            df = deserialize_df(run_data)
 
         new_element, chart_dic = create_chart(chart_type, title, df, n_clicks, selected_x, selected_y)
         existing_data.append(chart_dic)
@@ -236,11 +240,11 @@ def save_position(n_clicks, layout, dash_name, created_graphs):
     State('dataframe', 'data'),
     prevent_initial_call=True
 )
-def load_position(n_clicks, dash_name, df):
+def load_position(n_clicks, dash_name, run_data):
 
     if dash_name:
         
-        df=deserialize_df(df)
+        df=deserialize_df(run_data)
 
         if not dashboard_name_exists(dash_name):
             return [], {}, 0, []
@@ -252,7 +256,7 @@ def load_position(n_clicks, dash_name, df):
         elements, layout = get_dashboard_by_name(dashboard_name=dash_name)
 
         for element in elements:
-            type=element['type']
+            chart_type=element['type']
             index=element['index']
             title=element['title']
             x_val=element['x_val']
@@ -260,7 +264,11 @@ def load_position(n_clicks, dash_name, df):
             if 'y_val' in element.keys():
                 y_val=element['y_val']
 
-            new_chart, chart_dic = create_chart(type, title, df, index, x_val, y_val)
+            if chart_type == 'multi-run':
+                data = fetch_column(x_val)
+                new_chart, chart_dic = create_chart(chart_type, title, data, index, x_val, y_val)
+            else:
+                new_chart, chart_dic = create_chart(chart_type, title, df, index, x_val, y_val)
 
             children.append(new_chart)
             created_graphs.append(chart_dic)

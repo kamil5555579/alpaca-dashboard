@@ -49,6 +49,41 @@ def scatter_fig(df, x_col, y_col, title):
 
     return fig
 
+def run_scatter_fig(df, x_col, title):
+        
+    # make arrays
+    x = df[x_col]
+
+    fig = dict({
+            "data": [{"type": 'scattergl',
+                      "x": df.index,
+                      "y": x,
+                      "mode": 'markers',  # lines, markers
+                      "marker": {"color": '#FFFFFF', "symbol": 'circle', "size": 10, "opacity": 0.5,
+                                 # default marker
+                                 "line": {"color": 'Black', "width": 1.5}},
+                      "name": x_col,
+                      "showlegend": False}  # default: False
+                     ],
+            "layout": {"barmode": "stack", "title": {"text": title, "font": {"size": 20}},
+                       "legend": {"bgcolor": '#FFFFFF', "bordercolor": '#ff0000', "font": {"size": 25},
+                                  "orientation": 'v'},
+                       "xaxis": {"title": {"text": 'Run number', "font": {"size": 15}},
+                                 "tickfont": {"size": 15},
+                                 "autorange": True, "fixedrange": False, "type": 'linear', "gridcolor": "black",
+                                 "linecolor": "black", "linewidth": 4, "ticks": "inside", "tickwidth": 5,
+                                 "nticks": 20,
+                                 "ticklabelstep": 2, "ticklen": 10, "position": 0, "mirror": "all"},
+                       "yaxis": {"title": {"text": x_col, "font": {"size": 15}},
+                                 "tickfont": {"size": 15},
+                                 "autorange": True, "fixedrange": False, "exponentformat": "power",
+                                 "gridcolor": "black", "linecolor": "black", "linewidth": 4, "ticks": "inside",
+                                 "tickwidth": 5, "nticks": 20, "ticklabelstep": 2, "ticklen": 10,
+                                 "mirror": "allticks"}}
+        })
+
+    return fig
+
 def surface_fig(df, x_col, y_col, z_col):
 
     # erase NaN values

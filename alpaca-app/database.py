@@ -84,6 +84,17 @@ def fetch_run(run_number):
         df[column] = df.apply(lambda row: np.frombuffer(row[column]).reshape(row[shape_column]) if pd.notnull(row[column]) and pd.notnull(row[shape_column]) else None, axis=1)
     return df
 
+def fetch_column(column):
+    with engine.connect() as conn:
+        if column:
+            query = sqlalchemy.text(f'SELECT "Run_Number Run_Number __value", "{column}" FROM alpaca')
+            df = pd.read_sql_query(query, conn)
+
+    df.set_index('Run_Number Run_Number __value', inplace=True)
+
+    return df
+
+
 def get_column_type(element, columns_dic):
     if element in columns_dic['numerical_columns']:
         return "numerical_columns"
